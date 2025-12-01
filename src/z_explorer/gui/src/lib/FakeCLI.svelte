@@ -50,7 +50,15 @@
 
   // Tutorial state - collapsible, initialized from settings store
   let tutorialExpanded = $settings.cli.showTutorialOnStart;
-  
+
+  // History visibility state - initialized from settings store
+  let historyVisible = $settings.cli.showHistory;
+
+  // Toggle history visibility
+  function toggleHistory() {
+    historyVisible = !historyVisible;
+  }
+
   // Function to fetch version and config from backend
   export async function fetchVersion(apiBase: string) {
     try {
@@ -650,7 +658,7 @@
 </script>
 
 <div class="cli" style="font-size: {currentFontSize}">
-  <div class="history" bind:this={historyEl}>
+  <div class="history" class:hidden={!historyVisible} bind:this={historyEl}>
     <!-- Tutorial Section (at top) -->
     {#if $settings.cli.showTutorialOnStart || tutorialExpanded}
       <div class="tutorial-section">
@@ -770,6 +778,15 @@
 
   <div class="input-area">
     <div class="input-line">
+      <button
+        class="history-toggle"
+        on:click={toggleHistory}
+        title={historyVisible ? 'Hide history' : 'Show history'}
+        aria-label={historyVisible ? 'Hide history' : 'Show history'}
+        aria-pressed={historyVisible}
+      >
+        {historyVisible ? '☰' : '−'}
+      </button>
       <span class="prompt-symbol">❯❯❯</span>
       <input
         bind:this={inputEl}
@@ -815,6 +832,10 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .history.hidden {
+    display: none;
   }
 
   .line {
@@ -976,6 +997,29 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
+  }
+
+  .history-toggle {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    line-height: 1;
+    opacity: 0.6;
+  }
+
+  .history-toggle:hover {
+    color: var(--accent-primary);
+    background: rgba(139, 92, 246, 0.1);
+    opacity: 1;
+  }
+
+  .history-toggle:active {
+    transform: scale(0.95);
   }
 
   .prompt-symbol {

@@ -35,6 +35,7 @@ export interface CLISettings {
   showTipsOnStart: boolean;
   showTutorialOnStart: boolean;
   fontSize: FontSize;
+  showHistory: boolean;
 }
 
 export interface GenerationSettings {
@@ -79,6 +80,7 @@ export const DEFAULT_SETTINGS: ZExplorerSettings = {
     showTipsOnStart: true,
     showTutorialOnStart: true,
     fontSize: 'medium',
+    showHistory: true,
   },
   generation: {
     defaultWidth: 1024,
