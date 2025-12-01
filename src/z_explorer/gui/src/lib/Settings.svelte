@@ -525,6 +525,18 @@
                 <span>Show tutorial on startup</span>
               </label>
             </div>
+
+            <!-- Show History by Default -->
+            <div class="setting-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={localSettings.cli.showHistory}
+                />
+                <span>Show history by default</span>
+              </label>
+              <p class="setting-hint">When disabled, only the input line and progress bar are visible. Toggle with the ☰ button.</p>
+            </div>
           </div>
         {:else if activeTab === 'generation'}
           <div class="tab-panel" role="tabpanel">
@@ -1035,6 +1047,13 @@
   .checkbox-label span {
     font-size: 14px;
     color: var(--text-primary);
+  }
+
+  .setting-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 4px 0 0 28px;
+    line-height: 1.4;
   }
 
   /* Select */

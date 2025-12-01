@@ -71,6 +71,12 @@
   let isResizing = false;
   let minCliHeight = 150;
   let maxCliHeight = 600;
+  let cliHistoryVisible = $settings.cli.showHistory;
+
+  // Handle CLI history toggle
+  function handleHistoryToggle(event: CustomEvent<{ visible: boolean }>) {
+    cliHistoryVisible = event.detail.visible;
+  }
 
   // Sync CLI height from settings when settings change (but not during resize)
   $: if (!isResizing && $settings.cli.height !== cliHeight) {
@@ -625,16 +631,19 @@
   </div>
 
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="resize-handle" on:mousedown={startResize}>
-    <div class="handle-line"></div>
-  </div>
+  {#if cliHistoryVisible}
+    <div class="resize-handle" on:mousedown={startResize}>
+      <div class="handle-line"></div>
+    </div>
+  {/if}
 
-  <div class="cli-container" style="height: {cliHeight}px; flex: none;">
+  <div class="cli-container" class:collapsed={!cliHistoryVisible} style={cliHistoryVisible ? `height: ${cliHeight}px` : ''}>
     <FakeCLI
       bind:this={cliComponent}
       {isGenerating}
       isTauriAvailable={isTauriAvailable || isBackendConnected}
       on:generate={handleGenerate}
+      on:historyToggle={handleHistoryToggle}
       getGpuInfo={handleGpuInfo}
       unloadModels={handleUnload}
       listVariables={handleListVariables}
@@ -738,6 +747,12 @@
     min-height: 150px;
     max-height: 600px;
     background: var(--bg-secondary);
+    flex: none;
+  }
+
+  .cli-container.collapsed {
+    min-height: 0;
+    height: auto !important;
   }
 
   .resize-handle {
