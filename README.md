@@ -32,8 +32,6 @@ You wanted to make AI art. Instead you got:
 
 That's insane.
 
-This tool tries to reduce that friction so you can explore your ideas without distraction!
-
 ---
 
 ## Tutorial: Your First 10 Minutes
