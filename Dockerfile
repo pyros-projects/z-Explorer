@@ -1,5 +1,5 @@
 # Z-Explorer Docker Image
-# 
+#
 # Build:
 #   docker build -t z-explorer .
 #
@@ -12,6 +12,9 @@
 #     -v ./hf-cache:/app/.cache/huggingface \
 #     z-explorer
 #
+# ghcr:
+# docker pull ghcr.io/pyros-projects/z-explorer
+# docker run --gpus all -p 8345:8345 ghcr.io/pyros-projects/z-explorer:latest
 # Note: PyTorch wheels bundle CUDA runtime. Host only needs NVIDIA drivers
 # and nvidia-container-toolkit installed.
 
@@ -42,4 +45,3 @@ ENV HF_HOME=/app/.cache/huggingface
 # --quick-setup: Non-interactive config with Quick Start defaults
 # --host 0.0.0.0: Bind to all interfaces (required for Docker)
 CMD ["uv", "run", "z-explorer", "--quick-setup", "--host", "0.0.0.0"]
-

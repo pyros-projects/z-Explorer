@@ -65,6 +65,10 @@ uv run z-explorer
 
 Pick **"Quick Start"** when prompted. Grab a coffee while ~10GB of models download. ☕
 
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/download-progress-live.png" width="400">
+</p>
+
 Once complete, your browser opens to `http://localhost:8345` — you're ready to create!
 
 > **Requirements:** Linux or Windows, NVIDIA GPU with 12GB+ VRAM, [uv](https://docs.astral.sh/uv/) package manager.
