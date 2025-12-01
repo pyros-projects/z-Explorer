@@ -272,8 +272,7 @@
                 {modelsDownloaded[model.name] ? '✓' : '○'}
               </span>
               <div class="model-info">
-                <span class="model-label">{model.name}</span>
-                <span class="model-repo">{model.repo_id}</span>
+                <span class="model-label">{model.repo_id}</span>
               </div>
             </div>
           {/each}

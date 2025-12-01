@@ -267,15 +267,18 @@ def get_models_to_download() -> list[tuple[str, str]]:
     img_config = get_image_model_config()
     llm_config = get_llm_config()
     
-    # Image model
+    # Image model - use repo_id as name for model-agnostic display
     if img_config.mode == LoadingMode.HF_DOWNLOAD:
-        models.append(("Z-Image-Turbo", img_config.hf_repo or DEFAULT_Z_IMAGE_REPO))
+        repo_id = img_config.hf_repo or DEFAULT_Z_IMAGE_REPO
+        models.append((repo_id, repo_id))
     elif img_config.mode == LoadingMode.SDNQ:
-        models.append(("Z-Image-Turbo (SDNQ)", img_config.sdnq_model or DEFAULT_SDNQ_MODEL))
-    
-    # LLM
+        repo_id = img_config.sdnq_model or DEFAULT_SDNQ_MODEL
+        models.append((repo_id, repo_id))
+
+    # LLM - use repo_id as name for model-agnostic display
     if llm_config.mode == LLMMode.HF_DOWNLOAD:
-        models.append(("LLM (Qwen)", llm_config.hf_repo or DEFAULT_LLM_REPO))
+        repo_id = llm_config.hf_repo or DEFAULT_LLM_REPO
+        models.append((repo_id, repo_id))
     
     return models
 
