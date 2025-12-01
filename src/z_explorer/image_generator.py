@@ -35,22 +35,26 @@ def _unload_llm_if_needed():
     """Unload LLM to free GPU memory if loaded."""
     try:
         from z_explorer import llm_provider
+
         if llm_provider._model is not None:
             console.print("[dim]Unloading LLM to free GPU memory...[/dim]")
             llm_provider.unload_model()
     except ImportError:
         pass
 
+
 def _load_pipeline_sdnq(model_path: str):
     """Load pipeline from SDNQ.
-    
+
     Args:
         model_path: Path to model
     """
     import torch
     import diffusers
-    from sdnq import SDNQConfig
-    pipe = diffusers.ZImagePipeline.from_pretrained(model_path, torch_dtype=torch.bfloat16)
+
+    pipe = diffusers.ZImagePipeline.from_pretrained(
+        model_path, torch_dtype=torch.bfloat16
+    )
     pipe.enable_model_cpu_offload()
     return pipe
 
@@ -133,8 +137,8 @@ def _split_qkv_tensor(qkv_tensor, dim: int):
     """
     # QKV is concatenated along dimension 0: [Q, K, V]
     q = qkv_tensor[:dim]
-    k = qkv_tensor[dim:2*dim]
-    v = qkv_tensor[2*dim:]
+    k = qkv_tensor[dim : 2 * dim]
+    v = qkv_tensor[2 * dim :]
     return q, k, v
 
 
@@ -170,7 +174,9 @@ def _load_pipeline_components(
         FlowMatchEulerDiscreteScheduler,
         AutoencoderKL,
     )
-    from diffusers.models.transformers.transformer_z_image import ZImageTransformer2DModel
+    from diffusers.models.transformers.transformer_z_image import (
+        ZImageTransformer2DModel,
+    )
     from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
     console.print("[cyan]Loading Z-Image-Turbo from components...[/cyan]")
@@ -266,14 +272,18 @@ def _load_pipeline_components(
                 base_key = key.replace(".qkv.weight", "")
 
                 # Set Q, K, V separately
-                for suffix, split_tensor in [(".to_q.weight", q), (".to_k.weight", k), (".to_v.weight", v)]:
+                for suffix, split_tensor in [
+                    (".to_q.weight", q),
+                    (".to_k.weight", k),
+                    (".to_v.weight", v),
+                ]:
                     diffusers_key = base_key + suffix
                     set_module_tensor_to_device(
                         transformer,
                         diffusers_key,
-                        device='cpu',
+                        device="cpu",
                         dtype=torch.bfloat16,
-                        value=split_tensor
+                        value=split_tensor,
                     )
             else:
                 # Convert ComfyUI key to diffusers key
@@ -283,9 +293,9 @@ def _load_pipeline_components(
                 set_module_tensor_to_device(
                     transformer,
                     diffusers_key,
-                    device='cpu',
+                    device="cpu",
                     dtype=torch.bfloat16,
-                    value=tensor
+                    value=tensor,
                 )
 
     console.print("  [dim]Transformer loaded successfully[/dim]")
@@ -324,7 +334,8 @@ def _load_pipeline():
         # Check if diffusers is installed but missing ZImagePipeline
         try:
             import diffusers
-            diffusers_version = getattr(diffusers, '__version__', 'unknown')
+
+            diffusers_version = getattr(diffusers, "__version__", "unknown")
             raise ImportError(
                 f"ZImagePipeline not found in diffusers {diffusers_version}.\n"
                 "This model requires the latest diffusers from GitHub (not PyPI).\n\n"
@@ -373,7 +384,7 @@ def _load_pipeline():
     # Move to GPU if available
     if torch.cuda.is_available():
         _pipeline.to("cuda")
-        console.print(f"[green]Z-Image-Turbo loaded on CUDA[/green]")
+        console.print("[green]Z-Image-Turbo loaded on CUDA[/green]")
     else:
         console.print("[yellow]CUDA not available, using CPU (will be slow)[/yellow]")
         _pipeline.to("cpu")
@@ -423,6 +434,7 @@ def generate_image(
             progress_callback(step + 1, num_steps, None)
             # Longer sleep to ensure events are flushed to browser
             import time
+
             time.sleep(0.15)  # 150ms pause between steps
         return callback_kwargs
 
@@ -451,9 +463,9 @@ def generate_image(
     console.print(f"[green]Image saved to: {output_path}[/green]")
 
     # Save prompt to companion .txt file
-    prompt_path = Path(output_path).with_suffix('.txt')
+    prompt_path = Path(output_path).with_suffix(".txt")
     try:
-        prompt_path.write_text(prompt, encoding='utf-8')
+        prompt_path.write_text(prompt, encoding="utf-8")
     except Exception as e:
         console.print(f"[yellow]Warning: Could not save prompt: {e}[/yellow]")
 
@@ -472,8 +484,6 @@ def generate_image_with_preview(
 
     Same as generate_image but shows progress in terminal.
     """
-    from rich.live import Live
-    from rich.panel import Panel
     from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
     import torch
@@ -492,7 +502,9 @@ def generate_image_with_preview(
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         console=console,
     ) as progress:
-        task = progress.add_task(f"[cyan]Generating image (seed: {seed})...", total=num_steps)
+        task = progress.add_task(
+            f"[cyan]Generating image (seed: {seed})...", total=num_steps
+        )
 
         def callback(pipe, step, timestep, callback_kwargs):
             progress.update(task, completed=step + 1)
@@ -520,9 +532,9 @@ def generate_image_with_preview(
     console.print(f"[green]Image saved to: {output_path}[/green]")
 
     # Save prompt to companion .txt file
-    prompt_path = Path(output_path).with_suffix('.txt')
+    prompt_path = Path(output_path).with_suffix(".txt")
     try:
-        prompt_path.write_text(prompt, encoding='utf-8')
+        prompt_path.write_text(prompt, encoding="utf-8")
     except Exception as e:
         console.print(f"[yellow]Warning: Could not save prompt: {e}[/yellow]")
 
@@ -551,6 +563,7 @@ def get_gpu_memory_info() -> dict:
     """Get GPU memory information."""
     try:
         import torch
+
         if torch.cuda.is_available():
             allocated = torch.cuda.memory_allocated() / 1024**3
             reserved = torch.cuda.memory_reserved() / 1024**3

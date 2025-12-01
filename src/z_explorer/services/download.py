@@ -4,11 +4,8 @@ Provides download functionality with real-time progress updates
 that can be streamed to the web UI via SSE.
 """
 
-import os
-import asyncio
 from dataclasses import dataclass, field
 from typing import Optional, Callable
-from pathlib import Path
 
 from rich.console import Console
 from huggingface_hub import snapshot_download, HfApi
@@ -19,6 +16,7 @@ console = Console(stderr=True)
 @dataclass
 class DownloadProgress:
     """Progress update for a download."""
+
     model_name: str
     repo_id: str
     status: str  # "pending", "downloading", "complete", "error"
@@ -30,7 +28,7 @@ class DownloadProgress:
     speed_bps: float = 0
     eta_seconds: Optional[float] = None
     error: Optional[str] = None
-    
+
     @property
     def progress_percent(self) -> float:
         if self.bytes_total > 0:
@@ -38,7 +36,7 @@ class DownloadProgress:
         elif self.files_total > 0:
             return (self.files_done / self.files_total) * 100
         return 0
-    
+
     def to_dict(self) -> dict:
         return {
             "model_name": self.model_name,
@@ -50,16 +48,21 @@ class DownloadProgress:
             "bytes_done": self.bytes_done,
             "bytes_total": self.bytes_total,
             "progress_percent": round(self.progress_percent, 1),
-            "speed_mbps": round(self.speed_bps / 1024 / 1024, 2) if self.speed_bps else 0,
+            "speed_mbps": round(self.speed_bps / 1024 / 1024, 2)
+            if self.speed_bps
+            else 0,
             "eta_seconds": round(self.eta_seconds) if self.eta_seconds else None,
             "error": self.error,
         }
 
 
-@dataclass  
+@dataclass
 class DownloadState:
     """State for tracking all downloads."""
-    models_to_download: list[tuple[str, str]] = field(default_factory=list)  # (name, repo_id)
+
+    models_to_download: list[tuple[str, str]] = field(
+        default_factory=list
+    )  # (name, repo_id)
     current_model_index: int = 0
     current_progress: Optional[DownloadProgress] = None
     is_complete: bool = False
@@ -86,9 +89,9 @@ def get_repo_size(repo_id: str) -> tuple[int, int]:
         total_bytes = 0
         file_count = 0
 
-        if hasattr(repo_info, 'siblings') and repo_info.siblings:
+        if hasattr(repo_info, "siblings") and repo_info.siblings:
             for sibling in repo_info.siblings:
-                size = getattr(sibling, 'size', None) or 0
+                size = getattr(sibling, "size", None) or 0
                 total_bytes += size
                 file_count += 1
 
@@ -140,7 +143,7 @@ def download_model_with_progress(
         result = original_update(self, n)
 
         # Only track byte-level progress (n > 1000 bytes, total > 10KB)
-        if hasattr(self, 'total') and self.total and self.total > 10000 and n > 1000:
+        if hasattr(self, "total") and self.total and self.total > 10000 and n > 1000:
             cumulative_bytes[0] += n
             current_file_total[0] = self.total
 
@@ -153,7 +156,7 @@ def download_model_with_progress(
                 progress.bytes_total = self.total
 
             # Get current file from description
-            if hasattr(self, 'desc') and self.desc:
+            if hasattr(self, "desc") and self.desc:
                 progress.current_file = self.desc
 
             # Calculate speed and ETA based on current file
@@ -161,7 +164,9 @@ def download_model_with_progress(
             if elapsed > 0 and cumulative_bytes[0] > 0:
                 progress.speed_bps = cumulative_bytes[0] / elapsed
                 # ETA for current file
-                remaining = self.total - (cumulative_bytes[0] % self.total if self.total else 0)
+                remaining = self.total - (
+                    cumulative_bytes[0] % self.total if self.total else 0
+                )
                 if progress.speed_bps > 0:
                     progress.eta_seconds = remaining / progress.speed_bps
 
@@ -248,7 +253,7 @@ def download_model_with_progress(
 
 def get_models_to_download() -> list[tuple[str, str]]:
     """Get list of models that need to be downloaded based on current config.
-    
+
     Returns:
         List of (model_name, repo_id) tuples
     """
@@ -261,12 +266,12 @@ def get_models_to_download() -> list[tuple[str, str]]:
         DEFAULT_SDNQ_MODEL,
         DEFAULT_LLM_REPO,
     )
-    
+
     models = []
-    
+
     img_config = get_image_model_config()
     llm_config = get_llm_config()
-    
+
     # Image model - use repo_id as name for model-agnostic display
     if img_config.mode == LoadingMode.HF_DOWNLOAD:
         repo_id = img_config.hf_repo or DEFAULT_Z_IMAGE_REPO
@@ -279,7 +284,7 @@ def get_models_to_download() -> list[tuple[str, str]]:
     if llm_config.mode == LLMMode.HF_DOWNLOAD:
         repo_id = llm_config.hf_repo or DEFAULT_LLM_REPO
         models.append((repo_id, repo_id))
-    
+
     return models
 
 
@@ -287,20 +292,20 @@ def download_all_models(
     on_progress: Optional[Callable[[DownloadProgress], None]] = None,
 ) -> bool:
     """Download all configured models with progress tracking.
-    
+
     Args:
         on_progress: Callback for progress updates
-        
+
     Returns:
         True if all downloads succeeded
     """
     models = get_models_to_download()
-    
+
     if not models:
         return True
-    
+
     all_success = True
-    
+
     for model_name, repo_id in models:
         success = download_model_with_progress(
             model_name=model_name,
@@ -310,7 +315,7 @@ def download_all_models(
         if not success:
             all_success = False
             break
-    
+
     return all_success
 
 
@@ -337,4 +342,3 @@ def check_models_downloaded() -> dict[str, bool]:
         result[model_name] = repo_id in cached_repos
 
     return result
-

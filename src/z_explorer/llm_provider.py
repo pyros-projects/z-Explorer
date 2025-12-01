@@ -20,8 +20,6 @@ Supports any HuggingFace-compatible model including:
 """
 
 import json
-from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -46,6 +44,7 @@ def _load_model():
     # Unload image generator first to free GPU memory
     try:
         from z_explorer import image_generator
+
         if image_generator._pipeline is not None:
             console.print("[dim]Unloading image model to free GPU memory...[/dim]")
             image_generator.unload_pipeline()
@@ -57,8 +56,7 @@ def _load_model():
         from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
     except ImportError:
         raise ImportError(
-            "Local mode requires transformers and torch. "
-            "Install with: uv sync"
+            "Local mode requires transformers and torch. Install with: uv sync"
         )
 
     # Get independent LLM config
@@ -66,8 +64,6 @@ def _load_model():
         get_llm_config,
         get_image_model_config,
         LLMMode,
-        LoadingMode,
-        DEFAULT_Z_IMAGE_REPO,
     )
 
     config = get_llm_config()
@@ -78,7 +74,9 @@ def _load_model():
         console.print("[red]LLM configuration errors:[/red]")
         for err in errors:
             console.print(f"  - {err}")
-        raise ValueError("Invalid LLM configuration. Set LLM_MODE and LLM_PATH/LLM_REPO.")
+        raise ValueError(
+            "Invalid LLM configuration. Set LLM_MODE and LLM_PATH/LLM_REPO."
+        )
 
     # Load based on mode
     if config.mode == LLMMode.Z_IMAGE:
@@ -104,7 +102,9 @@ def _load_model():
 
     elif config.mode == LLMMode.HF_LOCAL:
         # Load from local path
-        console.print(f"[cyan]Loading LLM from local path: {config.hf_local_path}[/cyan]")
+        console.print(
+            f"[cyan]Loading LLM from local path: {config.hf_local_path}[/cyan]"
+        )
 
         _tokenizer = AutoTokenizer.from_pretrained(
             config.hf_local_path,
@@ -119,7 +119,9 @@ def _load_model():
 
     elif config.mode == LLMMode.GGUF:
         # Load from GGUF file
-        console.print(f"[cyan]Loading LLM from GGUF: {config.gguf_path}/{config.gguf_file}[/cyan]")
+        console.print(
+            f"[cyan]Loading LLM from GGUF: {config.gguf_path}/{config.gguf_file}[/cyan]"
+        )
 
         # GGUF loading uses gguf_file parameter
         _tokenizer = AutoTokenizer.from_pretrained(
@@ -152,9 +154,13 @@ def _load_from_z_image(img_config):
         from safetensors.torch import load_file
 
         if not img_config.text_encoder_path:
-            raise ValueError("Z_IMAGE mode requires Z_IMAGE_TEXT_ENCODER for COMPONENTS mode")
+            raise ValueError(
+                "Z_IMAGE mode requires Z_IMAGE_TEXT_ENCODER for COMPONENTS mode"
+            )
 
-        console.print(f"[cyan]Loading LLM from Z-Image text encoder: {img_config.text_encoder_path}[/cyan]")
+        console.print(
+            f"[cyan]Loading LLM from Z-Image text encoder: {img_config.text_encoder_path}[/cyan]"
+        )
 
         # Get config from HuggingFace (small JSON files)
         model_config = AutoConfig.from_pretrained(
@@ -188,7 +194,9 @@ def _load_from_z_image(img_config):
         tokenizer_path = f"{img_config.hf_local_path}/tokenizer"
         console.print(f"[cyan]Loading LLM from Z-Image HF clone: {model_path}[/cyan]")
 
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(
+            tokenizer_path, trust_remote_code=True
+        )
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
             torch_dtype=torch.bfloat16,
@@ -215,7 +223,9 @@ def _load_from_z_image(img_config):
 
     else:
         # HF_DOWNLOAD - download from Z-Image repo
-        console.print(f"[cyan]Loading LLM from Z-Image HF: {DEFAULT_Z_IMAGE_REPO}/text_encoder[/cyan]")
+        console.print(
+            f"[cyan]Loading LLM from Z-Image HF: {DEFAULT_Z_IMAGE_REPO}/text_encoder[/cyan]"
+        )
 
         tokenizer = AutoTokenizer.from_pretrained(
             DEFAULT_Z_IMAGE_REPO,
@@ -261,9 +271,7 @@ def generate_text(
 
     messages = [{"role": "user", "content": prompt}]
     text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
+        messages, tokenize=False, add_generation_prompt=True
     )
     inputs = tokenizer(text, return_tensors="pt").to(model.device)
 
@@ -279,8 +287,7 @@ def generate_text(
         )
 
     response = tokenizer.decode(
-        outputs[0][inputs.input_ids.shape[1]:],
-        skip_special_tokens=True
+        outputs[0][inputs.input_ids.shape[1] :], skip_special_tokens=True
     )
     return response.strip()
 
@@ -308,7 +315,7 @@ Rules:
     full_prompt = f"""{system_prompt}
 
 Original prompt: {user_prompt}
-{f'Additional instructions: {instruction}' if instruction else ''}
+{f"Additional instructions: {instruction}" if instruction else ""}
 
 Enhanced prompt:"""
 
@@ -317,60 +324,62 @@ Enhanced prompt:"""
 
 def _generate_with_outlines(prompt: str, count: int) -> list[str] | None:
     """Try to generate a JSON array using outlines for guaranteed structure.
-    
+
     Returns None if outlines is not available or fails.
     """
     try:
         import outlines
         from outlines import models, generate
-        
+
         # Get the already-loaded model and tokenizer
         model, tokenizer = _load_model()
-        
+
         # Wrap in outlines
         outlines_model = models.Transformers(model, tokenizer)
-        
+
         # Create a generator that forces a JSON array of strings
         generator = generate.json(outlines_model, list[str])
-        
+
         # Generate with structure guarantee
         result = generator(prompt)
-        
+
         if isinstance(result, list) and result:
-            console.print("[green]✓ Used outlines for guaranteed JSON structure[/green]")
+            console.print(
+                "[green]✓ Used outlines for guaranteed JSON structure[/green]"
+            )
             return result
-            
+
     except ImportError:
         # outlines not installed - that's fine, fall back to regular generation
         pass
     except Exception as e:
-        console.print(f"[yellow]Outlines failed ({e}), falling back to regular generation[/yellow]")
-    
+        console.print(
+            f"[yellow]Outlines failed ({e}), falling back to regular generation[/yellow]"
+        )
+
     return None
 
 
 def generate_prompt_variable_values(
-    variable_name: str,
-    context_prompt: str,
-    count: int = 20
+    variable_name: str, context_prompt: str, count: int = 20
 ) -> list[str]:
     """Generate values for a prompt variable using local LLM.
 
     The variable name itself controls what kind of values are generated.
     Name your variable descriptively to get the output you want:
-    
+
     Simple values:
         __cat_breed__           → "Persian", "Siamese", "Maine Coon"
         __color__               → "crimson", "azure", "golden"
         __art_style__           → "impressionist", "cyberpunk", "watercolor"
-    
+
     Detailed descriptions:
         __detailed_scene__      → Full scene descriptions
         __50_word_description__ → ~50 word descriptions
         __dramatic_lighting_scene__ → Scenes with dramatic lighting focus
-    
+
     The LLM interprets the variable name directly - no magic rules.
-    
+
     If `outlines` is installed, uses constrained generation for guaranteed
     valid JSON output. Otherwise falls back to regular generation + parsing.
 
@@ -384,7 +393,7 @@ def generate_prompt_variable_values(
     """
     # Convert underscores to spaces for natural language interpretation
     readable_name = variable_name.replace("_", " ").strip()
-    
+
     prompt = f"""Generate exactly {count} values for: "{readable_name}"
 
 Context: This will be substituted into the prompt "{context_prompt}"
@@ -403,33 +412,37 @@ JSON array:"""
     # Try outlines first (guaranteed JSON structure)
     result = _generate_with_outlines(prompt, count)
     if result:
-        return result[:count + 10]
-    
+        return result[: count + 10]
+
     # Fallback: regular generation + parsing
     response = generate_text(prompt, max_tokens=4096, temperature=0.7)
 
     # Extract JSON array from response
     try:
-        start = response.find('[')
-        end = response.rfind(']') + 1
+        start = response.find("[")
+        end = response.rfind("]") + 1
         if start != -1 and end > start:
             json_str = response[start:end]
             values = json.loads(json_str)
             if isinstance(values, list) and values:
-                return values[:count + 10]
+                return values[: count + 10]
     except json.JSONDecodeError:
         pass
 
     # Fallback: parse line by line
-    console.print("[yellow]Warning: Could not parse JSON, attempting line parsing[/yellow]")
+    console.print(
+        "[yellow]Warning: Could not parse JSON, attempting line parsing[/yellow]"
+    )
     lines = [
-        line.strip().strip('"').strip("'").strip(',')
-        for line in response.split('\n')
-        if line.strip() and not line.strip().startswith('[') and not line.strip().startswith(']')
+        line.strip().strip('"').strip("'").strip(",")
+        for line in response.split("\n")
+        if line.strip()
+        and not line.strip().startswith("[")
+        and not line.strip().startswith("]")
     ]
 
     if lines:
-        return lines[:count + 10]
+        return lines[: count + 10]
 
     console.print("[red]Warning: Failed to generate prompt variable values[/red]")
     return []

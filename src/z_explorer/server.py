@@ -9,7 +9,7 @@ Usage:
     # As module
     from z_explorer.server import serve
     serve(port=8345)
-    
+
     # Or via CLI
     z-explorer --server --port 8345
 """
@@ -22,7 +22,7 @@ from typing import Optional, Literal
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
@@ -64,6 +64,7 @@ DEFAULT_HOST = "127.0.0.1"
 def _get_output_dir() -> Path:
     """Get the output directory for generated images."""
     import os
+
     output_dir = Path(os.getenv("LOCAL_OUTPUT_DIR", "./output"))
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
@@ -76,12 +77,12 @@ def _get_gui_dist_dir() -> Optional[Path]:
     gui_dist = module_dir / "gui" / "dist"
     if gui_dist.exists():
         return gui_dist
-    
+
     # Check for development mode (running from source)
     dev_dist = module_dir.parent.parent / "gui" / "dist"
     if dev_dist.exists():
         return dev_dist
-    
+
     return None
 
 
@@ -91,11 +92,11 @@ async def lifespan(app: FastAPI):
     # Startup
     output_dir = _get_output_dir()
     print(f"[output] Output directory: {output_dir.absolute()}")
-    
+
     # Mount output directory for serving generated images
     if output_dir.exists():
         app.mount("/output", StaticFiles(directory=str(output_dir)), name="output")
-    
+
     # Mount GUI dist directory if it exists
     gui_dist = _get_gui_dist_dir()
     if gui_dist:
@@ -106,7 +107,7 @@ async def lifespan(app: FastAPI):
             app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
     else:
         print("[gui] No GUI dist found - API only mode")
-    
+
     yield
     # Shutdown
     print("[shutdown] Server shutting down...")
@@ -134,6 +135,7 @@ app.add_middleware(
 # Health & Status Endpoints
 # ============================================================================
 
+
 @app.get("/", include_in_schema=False)
 async def serve_gui():
     """Serve the GUI index.html."""
@@ -144,7 +146,7 @@ async def serve_gui():
             return FileResponse(index_file)
     return JSONResponse(
         {"error": "GUI not found. Run 'npm run build' in src/z_explorer/gui first."},
-        status_code=404
+        status_code=404,
     )
 
 
@@ -163,11 +165,12 @@ async def get_gpu_info():
     """Get GPU memory information."""
     try:
         from z_explorer.image_generator import get_gpu_memory_info
+
         info = get_gpu_memory_info()
-        
+
         if "error" in info:
             return GpuInfo(available=False, error=info.get("error"))
-        
+
         return GpuInfo(
             available=True,
             device_name=info.get("device_name"),
@@ -184,8 +187,10 @@ async def get_gpu_info():
 # Variables Endpoints
 # ============================================================================
 
+
 class VariablesResponse(BaseModel):
     """Response model for variables listing."""
+
     success: bool
     count: int
     variables: list[VariableInfo]
@@ -197,22 +202,24 @@ async def list_variables():
     """List all available prompt variables."""
     try:
         from z_explorer.models.prompt_vars import load_prompt_vars
-        
+
         prompt_vars = load_prompt_vars()
-        
+
         variables = []
         for var_id, var in prompt_vars.items():
-            variables.append(VariableInfo(
-                id=var_id,
-                description=var.description,
-                count=len(var.values),
-                sample=var.values[:5] if var.values else [],
-                file_path=var.file_path or "",
-            ))
-        
+            variables.append(
+                VariableInfo(
+                    id=var_id,
+                    description=var.description,
+                    count=len(var.values),
+                    sample=var.values[:5] if var.values else [],
+                    file_path=var.file_path or "",
+                )
+            )
+
         # Sort by ID
         variables.sort(key=lambda v: v.id)
-        
+
         return VariablesResponse(
             success=True,
             count=len(variables),
@@ -231,8 +238,10 @@ async def list_variables():
 # Setup & Download Endpoints
 # ============================================================================
 
+
 class SetupStatusResponse(BaseModel):
     """Response model for setup status."""
+
     is_configured: bool
     models_needed: list[dict]
     models_downloaded: dict[str, bool]
@@ -240,6 +249,7 @@ class SetupStatusResponse(BaseModel):
 
 class DownloadProgressData(BaseModel):
     """Progress data for a download."""
+
     model_name: str
     repo_id: str
     status: str  # "pending", "checking", "downloading", "complete", "error"
@@ -256,6 +266,7 @@ class DownloadProgressData(BaseModel):
 
 class ModelConfigResponse(BaseModel):
     """Response model for current model configuration."""
+
     image_model: str
     image_mode: str
     llm_model: str
@@ -336,18 +347,21 @@ async def get_setup_status():
     """Check if models are configured and downloaded."""
     try:
         from z_explorer.model_config import is_configured
-        from z_explorer.services.download import get_models_to_download, check_models_downloaded
-        
+        from z_explorer.services.download import (
+            get_models_to_download,
+            check_models_downloaded,
+        )
+
         configured = is_configured()
         models_needed = []
-        
+
         if configured:
             for name, repo_id in get_models_to_download():
                 models_needed.append({"name": name, "repo_id": repo_id})
             downloaded = check_models_downloaded()
         else:
             downloaded = {}
-        
+
         return SetupStatusResponse(
             is_configured=configured,
             models_needed=models_needed,
@@ -448,8 +462,10 @@ async def download_models_stream():
 # Model Management Endpoints
 # ============================================================================
 
+
 class UnloadResponse(BaseModel):
     """Response model for model unloading."""
+
     success: bool
     llm_unloaded: bool
     image_model_unloaded: bool
@@ -467,36 +483,40 @@ async def unload_models():
         cuda_cache_cleared=False,
         errors=[],
     )
-    
+
     # Unload LLM
     try:
         from z_explorer.llm_provider import unload_model
+
         unload_model()
         result.llm_unloaded = True
     except Exception as e:
         result.errors.append(f"LLM unload: {e}")
-    
+
     # Unload Image model
     try:
         from z_explorer.image_generator import unload_pipeline
+
         unload_pipeline()
         result.image_model_unloaded = True
     except Exception as e:
         result.errors.append(f"Image model unload: {e}")
-    
+
     # Clear CUDA cache
     try:
         import gc
+
         gc.collect()
-        
+
         import torch
+
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
             result.cuda_cache_cleared = True
     except Exception as e:
         result.errors.append(f"CUDA cache: {e}")
-    
+
     result.success = result.llm_unloaded or result.image_model_unloaded
     return result
 
@@ -512,6 +532,7 @@ VALID_LLM_MODES = {"hf_download", "hf_local", "gguf", "z_image"}
 
 class ModelSettingsUpdate(BaseModel):
     """Request model for updating model settings."""
+
     image_mode: Optional[str] = None
     image_repo: Optional[str] = None
     image_path: Optional[str] = None
@@ -522,6 +543,7 @@ class ModelSettingsUpdate(BaseModel):
 
 class ModelSettingsResponse(BaseModel):
     """Response model for model settings update."""
+
     status: str
     active_config: Optional[ModelConfigResponse] = None
     message: Optional[str] = None
@@ -530,6 +552,7 @@ class ModelSettingsResponse(BaseModel):
 
 class ModelTestRequest(BaseModel):
     """Request model for testing model configuration."""
+
     model_type: Literal["image", "llm"]
     mode: str
     repo: Optional[str] = None
@@ -538,12 +561,14 @@ class ModelTestRequest(BaseModel):
 
 class ModelTestResponse(BaseModel):
     """Response model for model configuration test."""
+
     valid: bool
     message: str
 
 
 class ModelReloadResponse(BaseModel):
     """Response model for model reload."""
+
     status: str
     duration_ms: Optional[int] = None
     config: Optional[ModelConfigResponse] = None
@@ -640,10 +665,17 @@ async def update_model_settings(request: ModelSettingsUpdate):
         )
 
     # Check if all values are None (clearing overrides)
-    all_none = all(v is None for v in [
-        request.image_mode, request.image_repo, request.image_path,
-        request.llm_mode, request.llm_repo, request.llm_path,
-    ])
+    all_none = all(
+        v is None
+        for v in [
+            request.image_mode,
+            request.image_repo,
+            request.image_path,
+            request.llm_mode,
+            request.llm_repo,
+            request.llm_path,
+        ]
+    )
 
     if all_none:
         clear_override_config()
@@ -771,6 +803,7 @@ async def reload_models():
     # Unload LLM
     try:
         from z_explorer.llm_provider import unload_model
+
         unload_model()
     except Exception as e:
         errors.append(f"LLM unload: {e}")
@@ -778,6 +811,7 @@ async def reload_models():
     # Unload Image model
     try:
         from z_explorer.image_generator import unload_pipeline
+
         unload_pipeline()
     except Exception as e:
         errors.append(f"Image model unload: {e}")
@@ -785,9 +819,11 @@ async def reload_models():
     # Clear CUDA cache
     try:
         import gc
+
         gc.collect()
 
         import torch
+
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
@@ -815,8 +851,10 @@ async def reload_models():
 # Image Listing Endpoint
 # ============================================================================
 
+
 class ImageInfo(BaseModel):
     """Information about a generated image."""
+
     path: str
     name: str
     url: str
@@ -826,6 +864,7 @@ class ImageInfo(BaseModel):
 
 class ImagesResponse(BaseModel):
     """Response model for images listing."""
+
     images: list[ImageInfo]
     count: int
 
@@ -834,29 +873,31 @@ class ImagesResponse(BaseModel):
 async def list_images():
     """List all generated images, newest first."""
     output_dir = _get_output_dir()
-    
+
     images = []
     for f in output_dir.glob("*.png"):
         # Try to read the prompt from the corresponding .txt file
         prompt = None
-        prompt_file = f.with_suffix('.txt')
+        prompt_file = f.with_suffix(".txt")
         if prompt_file.exists():
             try:
-                prompt = prompt_file.read_text(encoding='utf-8').strip()
+                prompt = prompt_file.read_text(encoding="utf-8").strip()
             except Exception:
                 pass
-        
-        images.append(ImageInfo(
-            path=str(f),
-            name=f.name,
-            url=f"/output/{f.name}",
-            modified=f.stat().st_mtime,
-            prompt=prompt,
-        ))
-    
+
+        images.append(
+            ImageInfo(
+                path=str(f),
+                name=f.name,
+                url=f"/output/{f.name}",
+                modified=f.stat().st_mtime,
+                prompt=prompt,
+            )
+        )
+
     # Sort by modification time, newest first
     images.sort(key=lambda x: x.modified, reverse=True)
-    
+
     return ImagesResponse(images=images, count=len(images))
 
 
@@ -864,57 +905,64 @@ async def list_images():
 # Generation Endpoints with SSE
 # ============================================================================
 
+
 async def _generate_event_stream(request: GenerationRequest):
     """
     Shared event stream generator for image generation.
-    
+
     Yields SSE events with JSON data for browser-friendly format.
     """
     logger.info(f"🎬 Starting SSE stream for prompt: {request.prompt[:50]}...")
-    
+
     progress_queue: asyncio.Queue[ProgressEvent] = asyncio.Queue()
     result_holder: list[GenerationResult] = []
     error_holder: list[str] = []
     events_sent = 0
     events_queued = 0
-    
+
     def on_progress(event: ProgressEvent):
         """Callback to queue progress events."""
         nonlocal events_queued
         try:
             progress_queue.put_nowait(event)
             events_queued += 1
-            logger.debug(f"📤 [{events_queued}] Queued: stage={event.stage}, msg={event.message}, progress={event.progress}")
+            logger.debug(
+                f"📤 [{events_queued}] Queued: stage={event.stage}, msg={event.message}, progress={event.progress}"
+            )
         except Exception as e:
             logger.error(f"❌ Failed to queue progress event: {e}")
-    
+
     def run_generation():
         """Run generation in thread pool."""
         logger.info("🔧 Generation thread started")
         try:
             result = generate(request, on_progress=on_progress)
             result_holder.append(result)
-            logger.info(f"✅ Generation complete: {len(result.images)} images, prompts: {result.final_prompts}")
+            logger.info(
+                f"✅ Generation complete: {len(result.images)} images, prompts: {result.final_prompts}"
+            )
         except Exception as e:
             logger.error(f"❌ Generation failed: {e}")
             error_holder.append(str(e))
-    
+
     # Start generation in background thread
     loop = asyncio.get_event_loop()
     gen_task = loop.run_in_executor(None, run_generation)
     logger.debug("Generation task submitted to executor")
-    
+
     def event_to_json(event: ProgressEvent) -> str:
         """Convert ProgressEvent to JSON for SSE."""
         path = event.data.get("path") if event.data else None
-        return json.dumps({
-            "stage": event.stage,
-            "message": event.message,
-            "progress": event.progress,
-            "path": path,
-            "data": event.data,
-        })
-    
+        return json.dumps(
+            {
+                "stage": event.stage,
+                "message": event.message,
+                "progress": event.progress,
+                "path": path,
+                "data": event.data,
+            }
+        )
+
     # Stream progress events while generation is running
     last_percent = -1
     poll_count = 0
@@ -922,25 +970,31 @@ async def _generate_event_stream(request: GenerationRequest):
         try:
             event = await asyncio.wait_for(progress_queue.get(), timeout=0.2)
             current_percent = event.progress if event.progress is not None else 0
-            
+
             events_sent += 1
             json_data = event_to_json(event)
-            logger.debug(f"📨 [{events_sent}] Sending SSE: {event.stage} ({event.progress}%)")
+            logger.debug(
+                f"📨 [{events_sent}] Sending SSE: {event.stage} ({event.progress}%)"
+            )
             yield {"data": json_data}
             last_percent = current_percent
             await asyncio.sleep(0)
-                
+
         except asyncio.TimeoutError:
             poll_count += 1
             if poll_count % 10 == 0:
-                logger.trace(f"⏳ Polling... (queue size: {progress_queue.qsize()}, task done: {gen_task.done()})")
+                logger.trace(
+                    f"⏳ Polling... (queue size: {progress_queue.qsize()}, task done: {gen_task.done()})"
+                )
             continue
         except Exception as e:
             logger.error(f"❌ Error in event loop: {e}")
             break
-    
-    logger.debug(f"🏁 Generation task done. Draining queue (size: {progress_queue.qsize()})")
-    
+
+    logger.debug(
+        f"🏁 Generation task done. Draining queue (size: {progress_queue.qsize()})"
+    )
+
     # Drain remaining events
     drain_count = 0
     while not progress_queue.empty():
@@ -953,9 +1007,11 @@ async def _generate_event_stream(request: GenerationRequest):
         except Exception as e:
             logger.error(f"❌ Error draining queue: {e}")
             break
-    
-    logger.info(f"📊 SSE Stats: queued={events_queued}, sent={events_sent}, drained={drain_count}")
-    
+
+    logger.info(
+        f"📊 SSE Stats: queued={events_queued}, sent={events_sent}, drained={drain_count}"
+    )
+
     # Send final result or error
     if error_holder:
         logger.error(f"❌ Sending error: {error_holder[0]}")
@@ -964,12 +1020,14 @@ async def _generate_event_stream(request: GenerationRequest):
         result = result_holder[0]
         logger.info(f"✅ Sending complete event with {len(result.images)} images")
         yield {
-            "data": json.dumps({
-                "stage": "complete",
-                "message": f"Generated {len(result.images)} image(s)",
-                "images": result.images,
-                "final_prompts": result.final_prompts,
-            }),
+            "data": json.dumps(
+                {
+                    "stage": "complete",
+                    "message": f"Generated {len(result.images)} image(s)",
+                    "images": result.images,
+                    "final_prompts": result.final_prompts,
+                }
+            ),
         }
     else:
         yield {"data": json.dumps({"stage": "error", "message": "Unknown error"})}
@@ -987,7 +1045,7 @@ async def generate_images_stream(
 ):
     """
     Generate images via SSE stream (GET for browser EventSource).
-    
+
     Query Parameters:
         prompt: The image prompt
         count: Number of images to generate (default: 1)
@@ -996,7 +1054,7 @@ async def generate_images_stream(
         seed: Random seed (optional)
         enhance: Whether to enhance the prompt (default: false)
         enhance_instruction: Optional enhancement instruction
-    
+
     Returns Server-Sent Events with JSON data.
     """
     request = GenerationRequest(
@@ -1018,7 +1076,7 @@ async def generate_images_stream(
 async def generate_images_post(request: GenerationRequest):
     """
     Generate images via SSE stream (POST for programmatic use).
-    
+
     Request Body:
         prompt: The image prompt
         count: Number of images to generate (default: 1)
@@ -1027,7 +1085,7 @@ async def generate_images_post(request: GenerationRequest):
         seed: Random seed (optional)
         enhance: Whether to enhance the prompt (default: false)
         enhance_instruction: Optional enhancement instruction
-    
+
     Returns Server-Sent Events with JSON data.
     """
     return EventSourceResponse(
@@ -1040,18 +1098,19 @@ async def generate_images_post(request: GenerationRequest):
 # Server Entry Point
 # ============================================================================
 
+
 def serve(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
     """Start the Z-Explorer API server.
-    
+
     Args:
         host: Host to bind to (default: 127.0.0.1)
         port: Port to bind to (default: 8345)
     """
     import uvicorn
-    
+
     print(f"[startup] Starting Z-Explorer server on http://{host}:{port}")
     print(f"[docs] API docs at http://{host}:{port}/docs")
-    
+
     uvicorn.run(
         app,
         host=host,
@@ -1062,4 +1121,3 @@ def serve(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
 
 if __name__ == "__main__":
     serve()
-

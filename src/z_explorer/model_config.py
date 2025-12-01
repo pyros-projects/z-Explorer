@@ -28,10 +28,11 @@ _override_config: dict | None = None
 
 class LoadingMode(str, Enum):
     """Image model loading strategy."""
+
     HF_DOWNLOAD = "hf_download"  # Download from HuggingFace Hub
-    HF_LOCAL = "hf_local"        # Use local HuggingFace clone
-    COMPONENTS = "components"    # Use individual safetensor files
-    SDNQ = "sdnq"                # Use SDNQ quantized model
+    HF_LOCAL = "hf_local"  # Use local HuggingFace clone
+    COMPONENTS = "components"  # Use individual safetensor files
+    SDNQ = "sdnq"  # Use SDNQ quantized model
 
 
 class LLMMode(str, Enum):
@@ -39,10 +40,11 @@ class LLMMode(str, Enum):
 
     Supports any HuggingFace-compatible LLM (Qwen, Llama, etc.)
     """
-    Z_IMAGE = "z_image"          # Use Z-Image's text encoder (thinking Qwen - slower)
-    HF_LOCAL = "hf_local"        # Local HuggingFace clone
+
+    Z_IMAGE = "z_image"  # Use Z-Image's text encoder (thinking Qwen - slower)
+    HF_LOCAL = "hf_local"  # Local HuggingFace clone
     HF_DOWNLOAD = "hf_download"  # Download from HuggingFace Hub
-    GGUF = "gguf"                # Load from GGUF file
+    GGUF = "gguf"  # Load from GGUF file
 
 
 # Default HuggingFace repositories
@@ -57,6 +59,7 @@ DEFAULT_LLM_REPO_QUANTIZED = "unsloth/Qwen3-4B-Instruct-2507-bnb-4bit"
 @dataclass
 class ImageModelConfig:
     """Configuration for the image generation model."""
+
     mode: LoadingMode
 
     # For HF_DOWNLOAD mode
@@ -126,6 +129,7 @@ class LLMConfig:
     Supports any HuggingFace-compatible model (Qwen, Llama, Mistral, etc.)
     including BNB quantized models from unsloth.
     """
+
     mode: LLMMode
 
     # For HF_DOWNLOAD mode
@@ -215,16 +219,22 @@ def get_image_model_config() -> ImageModelConfig:
     try:
         mode = LoadingMode(mode_str)
     except ValueError:
-        console.print(f"[yellow]Invalid Z_IMAGE_MODE '{mode_str}', defaulting to hf_download[/yellow]")
+        console.print(
+            f"[yellow]Invalid Z_IMAGE_MODE '{mode_str}', defaulting to hf_download[/yellow]"
+        )
         mode = LoadingMode.HF_DOWNLOAD
 
     return ImageModelConfig(
         mode=mode,
-        hf_repo=legacy_path if legacy_path and not Path(legacy_path).exists() else DEFAULT_Z_IMAGE_REPO,
+        hf_repo=legacy_path
+        if legacy_path and not Path(legacy_path).exists()
+        else DEFAULT_Z_IMAGE_REPO,
         sdnq_model=sdnq_model,
         hf_local_path=hf_local,
         transformer_path=transformer,
-        text_encoder_path=text_encoder.strip() if text_encoder else None,  # Strip whitespace
+        text_encoder_path=text_encoder.strip()
+        if text_encoder
+        else None,  # Strip whitespace
         vae_path=vae,
     )
 
@@ -267,7 +277,9 @@ def get_llm_config() -> LLMConfig:
     try:
         mode = LLMMode(mode_str)
     except ValueError:
-        console.print(f"[yellow]Invalid LLM_MODE '{mode_str}', defaulting to z_image[/yellow]")
+        console.print(
+            f"[yellow]Invalid LLM_MODE '{mode_str}', defaulting to z_image[/yellow]"
+        )
         mode = LLMMode.Z_IMAGE
 
     return LLMConfig(
@@ -533,7 +545,9 @@ def print_config():
     console.print(f"  Mode: [cyan]{llm_config.mode.value}[/cyan]")
 
     if llm_config.mode == LLMMode.Z_IMAGE:
-        console.print("  [dim]Using Z-Image's text encoder (thinking Qwen - slower)[/dim]")
+        console.print(
+            "  [dim]Using Z-Image's text encoder (thinking Qwen - slower)[/dim]"
+        )
     elif llm_config.mode == LLMMode.HF_DOWNLOAD:
         console.print(f"  HF Repo: {llm_config.hf_repo}")
     elif llm_config.mode == LLMMode.HF_LOCAL:

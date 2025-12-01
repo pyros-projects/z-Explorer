@@ -32,7 +32,7 @@ ProgressStage = Literal[
 
 class GenerationRequest(BaseModel):
     """Request to generate images.
-    
+
     Attributes:
         prompt: The text prompt with optional __variables__ and > enhancement
         count: Number of images to generate (1-100)
@@ -42,27 +42,31 @@ class GenerationRequest(BaseModel):
         enhance: Whether to apply LLM enhancement
         enhancement_instruction: Custom enhancement instructions
     """
+
     prompt: str = Field(..., min_length=1, description="The generation prompt")
     count: int = Field(default=1, ge=1, le=100, description="Number of images")
     width: int = Field(default=1024, ge=256, le=2048, description="Image width")
     height: int = Field(default=1024, ge=256, le=2048, description="Image height")
     seed: Optional[int] = Field(default=None, ge=0, description="Random seed")
     enhance: bool = Field(default=False, description="Apply LLM enhancement")
-    enhancement_instruction: str = Field(default="", description="Enhancement instructions")
+    enhancement_instruction: str = Field(
+        default="", description="Enhancement instructions"
+    )
 
 
 class ProgressEvent(BaseModel):
     """Progress update during generation.
-    
+
     These events are emitted during the generation process to provide
     real-time feedback to CLI (Rich console) or GUI (SSE stream).
-    
+
     Attributes:
         stage: Current stage of the generation process
         message: Human-readable progress message
         progress: Optional percentage (0-100)
         data: Optional additional data (e.g., image path, variable values)
     """
+
     stage: ProgressStage
     message: str
     progress: Optional[int] = Field(default=None, ge=0, le=100)
@@ -71,7 +75,7 @@ class ProgressEvent(BaseModel):
 
 class GenerationResult(BaseModel):
     """Result of image generation.
-    
+
     Attributes:
         success: Whether generation completed successfully
         images: List of generated image file paths
@@ -79,6 +83,7 @@ class GenerationResult(BaseModel):
         errors: List of error messages if any
         seeds_used: Seeds used for each image
     """
+
     success: bool
     images: list[str] = Field(default_factory=list)
     final_prompts: list[str] = Field(default_factory=list)
@@ -88,7 +93,7 @@ class GenerationResult(BaseModel):
 
 class GpuInfo(BaseModel):
     """GPU memory information.
-    
+
     Attributes:
         available: Whether CUDA GPU is available
         device_name: Name of the GPU device
@@ -98,6 +103,7 @@ class GpuInfo(BaseModel):
         free_gb: Free memory in GB
         error: Error message if GPU info unavailable
     """
+
     available: bool
     device_name: Optional[str] = None
     allocated_gb: Optional[float] = None
@@ -109,7 +115,7 @@ class GpuInfo(BaseModel):
 
 class VariableInfo(BaseModel):
     """Information about a prompt variable.
-    
+
     Attributes:
         id: Variable identifier (e.g., "__animal__")
         description: Optional description of the variable
@@ -117,9 +123,9 @@ class VariableInfo(BaseModel):
         sample: Sample values for preview
         file_path: Path to the variable definition file
     """
+
     id: str
     description: Optional[str] = None
     count: int = Field(ge=0)
     sample: list[str] = Field(default_factory=list)
     file_path: str
-

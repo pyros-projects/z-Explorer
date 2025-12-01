@@ -8,8 +8,7 @@ Tests for:
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-from pathlib import Path
+from unittest.mock import patch
 
 from z_explorer.server import app
 
@@ -24,12 +23,13 @@ def client():
 def reset_overrides():
     """Reset model overrides before and after each test."""
     from z_explorer import model_config
+
     # Clear before test
-    if hasattr(model_config, '_override_config'):
+    if hasattr(model_config, "_override_config"):
         model_config._override_config = None
     yield
     # Clear after test
-    if hasattr(model_config, '_override_config'):
+    if hasattr(model_config, "_override_config"):
         model_config._override_config = None
 
 
@@ -38,12 +38,15 @@ class TestModelSettingsUpdateEndpoint:
 
     def test_update_accepts_valid_config(self, client, reset_overrides):
         """Test updating model settings with valid config."""
-        response = client.post("/api/settings/models", json={
-            "image_mode": "hf_download",
-            "image_repo": "test/model-repo",
-            "llm_mode": "hf_download",
-            "llm_repo": "test/llm-repo",
-        })
+        response = client.post(
+            "/api/settings/models",
+            json={
+                "image_mode": "hf_download",
+                "image_repo": "test/model-repo",
+                "llm_mode": "hf_download",
+                "llm_repo": "test/llm-repo",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -52,32 +55,47 @@ class TestModelSettingsUpdateEndpoint:
 
     def test_update_rejects_invalid_image_mode(self, client, reset_overrides):
         """Test rejecting invalid image mode."""
-        response = client.post("/api/settings/models", json={
-            "image_mode": "invalid_mode",
-        })
+        response = client.post(
+            "/api/settings/models",
+            json={
+                "image_mode": "invalid_mode",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "error"
-        assert "image_mode" in data.get("message", "").lower() or data.get("field") == "image_mode"
+        assert (
+            "image_mode" in data.get("message", "").lower()
+            or data.get("field") == "image_mode"
+        )
 
     def test_update_rejects_invalid_llm_mode(self, client, reset_overrides):
         """Test rejecting invalid LLM mode."""
-        response = client.post("/api/settings/models", json={
-            "llm_mode": "invalid_mode",
-        })
+        response = client.post(
+            "/api/settings/models",
+            json={
+                "llm_mode": "invalid_mode",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "error"
-        assert "llm_mode" in data.get("message", "").lower() or data.get("field") == "llm_mode"
+        assert (
+            "llm_mode" in data.get("message", "").lower()
+            or data.get("field") == "llm_mode"
+        )
 
     def test_update_partial_config(self, client, reset_overrides):
         """Test updating only image or only LLM config."""
         # Update only image
-        response = client.post("/api/settings/models", json={
-            "image_mode": "sdnq",
-        })
+        response = client.post(
+            "/api/settings/models",
+            json={
+                "image_mode": "sdnq",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -85,10 +103,13 @@ class TestModelSettingsUpdateEndpoint:
 
     def test_update_stores_override(self, client, reset_overrides):
         """Test that update stores override config."""
-        response = client.post("/api/settings/models", json={
-            "image_mode": "hf_download",
-            "image_repo": "custom/repo",
-        })
+        response = client.post(
+            "/api/settings/models",
+            json={
+                "image_mode": "hf_download",
+                "image_repo": "custom/repo",
+            },
+        )
 
         assert response.status_code == 200
 
@@ -99,16 +120,22 @@ class TestModelSettingsUpdateEndpoint:
     def test_update_null_clears_override(self, client, reset_overrides):
         """Test that passing null values clears overrides."""
         # First set an override
-        client.post("/api/settings/models", json={
-            "image_mode": "hf_download",
-            "image_repo": "custom/repo",
-        })
+        client.post(
+            "/api/settings/models",
+            json={
+                "image_mode": "hf_download",
+                "image_repo": "custom/repo",
+            },
+        )
 
         # Then clear it with nulls
-        response = client.post("/api/settings/models", json={
-            "image_mode": None,
-            "image_repo": None,
-        })
+        response = client.post(
+            "/api/settings/models",
+            json={
+                "image_mode": None,
+                "image_repo": None,
+            },
+        )
 
         assert response.status_code == 200
 
@@ -123,11 +150,14 @@ class TestModelTestEndpoint:
         model_dir.mkdir()
         (model_dir / "model_index.json").write_text("{}")
 
-        response = client.post("/api/settings/models/test", json={
-            "model_type": "image",
-            "mode": "hf_local",
-            "path": str(model_dir),
-        })
+        response = client.post(
+            "/api/settings/models/test",
+            json={
+                "model_type": "image",
+                "mode": "hf_local",
+                "path": str(model_dir),
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -135,24 +165,33 @@ class TestModelTestEndpoint:
 
     def test_test_fails_for_nonexistent_path(self, client):
         """Test validation fails for non-existent path."""
-        response = client.post("/api/settings/models/test", json={
-            "model_type": "image",
-            "mode": "hf_local",
-            "path": "/nonexistent/path/to/model",
-        })
+        response = client.post(
+            "/api/settings/models/test",
+            json={
+                "model_type": "image",
+                "mode": "hf_local",
+                "path": "/nonexistent/path/to/model",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
         assert data["valid"] is False
-        assert "not found" in data["message"].lower() or "not exist" in data["message"].lower()
+        assert (
+            "not found" in data["message"].lower()
+            or "not exist" in data["message"].lower()
+        )
 
     def test_test_validates_hf_download_repo_format(self, client):
         """Test validation accepts valid HF repo format."""
-        response = client.post("/api/settings/models/test", json={
-            "model_type": "image",
-            "mode": "hf_download",
-            "repo": "organization/model-name",
-        })
+        response = client.post(
+            "/api/settings/models/test",
+            json={
+                "model_type": "image",
+                "mode": "hf_download",
+                "repo": "organization/model-name",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -165,11 +204,14 @@ class TestModelTestEndpoint:
         model_dir.mkdir()
         (model_dir / "config.json").write_text("{}")
 
-        response = client.post("/api/settings/models/test", json={
-            "model_type": "llm",
-            "mode": "hf_local",
-            "path": str(model_dir),
-        })
+        response = client.post(
+            "/api/settings/models/test",
+            json={
+                "model_type": "llm",
+                "mode": "hf_local",
+                "path": str(model_dir),
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -177,21 +219,27 @@ class TestModelTestEndpoint:
 
     def test_test_rejects_invalid_model_type(self, client):
         """Test rejection of invalid model_type."""
-        response = client.post("/api/settings/models/test", json={
-            "model_type": "invalid",
-            "mode": "hf_download",
-            "repo": "test/repo",
-        })
+        response = client.post(
+            "/api/settings/models/test",
+            json={
+                "model_type": "invalid",
+                "mode": "hf_download",
+                "repo": "test/repo",
+            },
+        )
 
         assert response.status_code == 422  # Pydantic validation error
 
     def test_test_sdnq_mode(self, client):
         """Test SDNQ mode validation."""
-        response = client.post("/api/settings/models/test", json={
-            "model_type": "image",
-            "mode": "sdnq",
-            "repo": "Disty0/Z-Image-Turbo-SDNQ",
-        })
+        response = client.post(
+            "/api/settings/models/test",
+            json={
+                "model_type": "image",
+                "mode": "sdnq",
+                "repo": "Disty0/Z-Image-Turbo-SDNQ",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -203,9 +251,9 @@ class TestModelReloadEndpoint:
 
     def test_reload_returns_success_with_duration(self, client, reset_overrides):
         """Test reload returns success with duration."""
-        with patch('z_explorer.llm_provider.unload_model'):
-            with patch('z_explorer.image_generator.unload_pipeline'):
-                with patch('torch.cuda.is_available', return_value=False):
+        with patch("z_explorer.llm_provider.unload_model"):
+            with patch("z_explorer.image_generator.unload_pipeline"):
+                with patch("torch.cuda.is_available", return_value=False):
                     response = client.post("/api/models/reload")
 
         assert response.status_code == 200
@@ -217,15 +265,18 @@ class TestModelReloadEndpoint:
     def test_reload_handles_load_failure_with_rollback(self, client, reset_overrides):
         """Test reload handles load failure and reports rollback."""
         # First set an override
-        client.post("/api/settings/models", json={
-            "image_mode": "hf_local",
-            "image_path": "/invalid/path",
-        })
+        client.post(
+            "/api/settings/models",
+            json={
+                "image_mode": "hf_local",
+                "image_path": "/invalid/path",
+            },
+        )
 
         # Try reload which should fail
-        with patch('z_explorer.llm_provider.unload_model'):
-            with patch('z_explorer.image_generator.unload_pipeline'):
-                with patch('torch.cuda.is_available', return_value=False):
+        with patch("z_explorer.llm_provider.unload_model"):
+            with patch("z_explorer.image_generator.unload_pipeline"):
+                with patch("torch.cuda.is_available", return_value=False):
                     # Mock a load failure
                     response = client.post("/api/models/reload")
 
@@ -237,9 +288,9 @@ class TestModelReloadEndpoint:
 
     def test_reload_returns_config(self, client, reset_overrides):
         """Test reload returns current config."""
-        with patch('z_explorer.llm_provider.unload_model'):
-            with patch('z_explorer.image_generator.unload_pipeline'):
-                with patch('torch.cuda.is_available', return_value=False):
+        with patch("z_explorer.llm_provider.unload_model"):
+            with patch("z_explorer.image_generator.unload_pipeline"):
+                with patch("torch.cuda.is_available", return_value=False):
                     response = client.post("/api/models/reload")
 
         assert response.status_code == 200
@@ -251,11 +302,11 @@ class TestModelReloadEndpoint:
 
     def test_reload_clears_cuda_cache(self, client, reset_overrides):
         """Test reload clears CUDA cache."""
-        with patch('z_explorer.llm_provider.unload_model'):
-            with patch('z_explorer.image_generator.unload_pipeline'):
-                with patch('torch.cuda.is_available', return_value=True) as mock_cuda:
-                    with patch('torch.cuda.empty_cache') as mock_clear:
-                        with patch('torch.cuda.synchronize'):
+        with patch("z_explorer.llm_provider.unload_model"):
+            with patch("z_explorer.image_generator.unload_pipeline"):
+                with patch("torch.cuda.is_available", return_value=True) as mock_cuda:
+                    with patch("torch.cuda.empty_cache") as mock_clear:
+                        with patch("torch.cuda.synchronize"):
                             response = client.post("/api/models/reload")
 
         assert response.status_code == 200
@@ -280,7 +331,11 @@ class TestModelConfigOverrides:
 
     def test_get_active_config_prefers_override(self, reset_overrides):
         """Test that get_active_config prefers overrides over .env."""
-        from z_explorer.model_config import set_override_config, get_active_image_config, LoadingMode
+        from z_explorer.model_config import (
+            set_override_config,
+            get_active_image_config,
+            LoadingMode,
+        )
 
         # Set override
         set_override_config(image_mode="sdnq")

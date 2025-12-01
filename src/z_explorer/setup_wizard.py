@@ -8,7 +8,6 @@ This wizard guides users through configuring their model sources with three opti
 After setup, models are downloaded and verified before first use.
 """
 
-import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -66,6 +65,7 @@ PRESETS = {
 # UI Helpers
 # =============================================================================
 
+
 def print_welcome():
     """Print the welcome banner."""
     welcome_text = Text()
@@ -95,6 +95,7 @@ def print_preset_info():
 # Validation Helpers
 # =============================================================================
 
+
 def validate_path(path: str) -> bool:
     """Validate that a path exists."""
     return Path(path).exists()
@@ -119,6 +120,7 @@ def validate_hf_directory(path: str) -> bool:
 # Setup Steps
 # =============================================================================
 
+
 def ask_preset() -> str:
     """Ask user which preset to use.
 
@@ -131,17 +133,10 @@ def ask_preset() -> str:
         "Select setup mode:",
         choices=[
             questionary.Choice(
-                "🚀 Quick Start (Recommended for beginners)",
-                value="quick_start"
+                "🚀 Quick Start (Recommended for beginners)", value="quick_start"
             ),
-            questionary.Choice(
-                "🔧 Custom Setup",
-                value="custom"
-            ),
-            questionary.Choice(
-                "💪 Full Quality",
-                value="full_quality"
-            ),
+            questionary.Choice("🔧 Custom Setup", value="custom"),
+            questionary.Choice("💪 Full Quality", value="full_quality"),
         ],
     ).ask()
 
@@ -165,20 +160,16 @@ def ask_custom_image_model() -> tuple[LoadingMode, dict]:
         "How would you like to load the image model?",
         choices=[
             questionary.Choice(
-                "Download from HuggingFace (full precision, ~15GB)",
-                value="hf_download"
+                "Download from HuggingFace (full precision, ~15GB)", value="hf_download"
             ),
             questionary.Choice(
-                "Download SDNQ quantized model (recommended, ~6GB)",
-                value="sdnq"
+                "Download SDNQ quantized model (recommended, ~6GB)", value="sdnq"
             ),
             questionary.Choice(
-                "Use local HuggingFace clone (offline mode)",
-                value="hf_local"
+                "Use local HuggingFace clone (offline mode)", value="hf_local"
             ),
             questionary.Choice(
-                "Use separate component files (ComfyUI-style)",
-                value="components"
+                "Use separate component files (ComfyUI-style)", value="components"
             ),
         ],
     ).ask()
@@ -204,7 +195,8 @@ def ask_custom_image_model() -> tuple[LoadingMode, dict]:
         mode = LoadingMode.HF_LOCAL
         path = questionary.path(
             "Path to local HuggingFace model directory:",
-            validate=lambda p: validate_hf_directory(p) or "Not a valid HuggingFace model directory",
+            validate=lambda p: validate_hf_directory(p)
+            or "Not a valid HuggingFace model directory",
         ).ask()
 
         if path is None:
@@ -221,7 +213,8 @@ def ask_custom_image_model() -> tuple[LoadingMode, dict]:
         # Transformer
         transformer = questionary.path(
             "Transformer model (.safetensors):",
-            validate=lambda p: validate_safetensor(p) or "File must be a .safetensors file",
+            validate=lambda p: validate_safetensor(p)
+            or "File must be a .safetensors file",
         ).ask()
         if transformer is None:
             console.print("[red]Setup cancelled.[/red]")
@@ -231,7 +224,8 @@ def ask_custom_image_model() -> tuple[LoadingMode, dict]:
         # Text encoder
         text_encoder = questionary.path(
             "Text encoder (.safetensors):",
-            validate=lambda p: validate_safetensor(p) or "File must be a .safetensors file",
+            validate=lambda p: validate_safetensor(p)
+            or "File must be a .safetensors file",
         ).ask()
         if text_encoder is None:
             console.print("[red]Setup cancelled.[/red]")
@@ -241,7 +235,8 @@ def ask_custom_image_model() -> tuple[LoadingMode, dict]:
         # VAE
         vae = questionary.path(
             "VAE (.safetensors):",
-            validate=lambda p: validate_safetensor(p) or "File must be a .safetensors file",
+            validate=lambda p: validate_safetensor(p)
+            or "File must be a .safetensors file",
         ).ask()
         if vae is None:
             console.print("[red]Setup cancelled.[/red]")
@@ -249,7 +244,9 @@ def ask_custom_image_model() -> tuple[LoadingMode, dict]:
         config["vae"] = str(Path(vae).resolve())
 
         console.print("\n[green]Component paths configured![/green]")
-        console.print("[dim]Note: Model architecture configs will be downloaded from HuggingFace[/dim]\n")
+        console.print(
+            "[dim]Note: Model architecture configs will be downloaded from HuggingFace[/dim]\n"
+        )
 
     return mode, config
 
@@ -268,24 +265,17 @@ def ask_custom_llm() -> tuple[LLMMode, dict]:
         choices=[
             questionary.Choice(
                 "Use Z-Image's text encoder (no extra download, but slower)",
-                value="z_image"
+                value="z_image",
             ),
             questionary.Choice(
                 "Download BNB 4-bit quantized model (fast, recommended)",
-                value="hf_download_bnb"
+                value="hf_download_bnb",
             ),
             questionary.Choice(
-                "Download from HuggingFace (custom repo)",
-                value="hf_download"
+                "Download from HuggingFace (custom repo)", value="hf_download"
             ),
-            questionary.Choice(
-                "Use local model path",
-                value="hf_local"
-            ),
-            questionary.Choice(
-                "Use GGUF file (CPU-friendly)",
-                value="gguf"
-            ),
+            questionary.Choice("Use local model path", value="hf_local"),
+            questionary.Choice("Use GGUF file (CPU-friendly)", value="gguf"),
         ],
     ).ask()
 
@@ -298,7 +288,9 @@ def ask_custom_llm() -> tuple[LLMMode, dict]:
     if choice == "z_image":
         mode = LLMMode.Z_IMAGE
         console.print("[green]Will use Z-Image's text encoder[/green]")
-        console.print("[dim]Note: This uses 'thinking' mode which is slower for variable generation[/dim]\n")
+        console.print(
+            "[dim]Note: This uses 'thinking' mode which is slower for variable generation[/dim]\n"
+        )
 
     elif choice == "hf_download_bnb":
         mode = LLMMode.HF_DOWNLOAD
@@ -347,7 +339,9 @@ def ask_custom_llm() -> tuple[LLMMode, dict]:
             console.print("[red]Setup cancelled.[/red]")
             sys.exit(1)
         config["gguf_file"] = gguf_file
-        console.print(f"[green]Will use GGUF: {config['path']}/{config['gguf_file']}[/green]\n")
+        console.print(
+            f"[green]Will use GGUF: {config['path']}/{config['gguf_file']}[/green]\n"
+        )
 
     return mode, config
 
@@ -356,8 +350,10 @@ def ask_custom_llm() -> tuple[LLMMode, dict]:
 # Model Download & Verification
 # =============================================================================
 
-def download_models(image_mode: LoadingMode, image_config: dict,
-                    llm_mode: LLMMode, llm_config: dict) -> bool:
+
+def download_models(
+    image_mode: LoadingMode, image_config: dict, llm_mode: LLMMode, llm_config: dict
+) -> bool:
     """Download models that need downloading.
 
     Returns:
@@ -371,7 +367,9 @@ def download_models(image_mode: LoadingMode, image_config: dict,
     if image_mode == LoadingMode.HF_DOWNLOAD:
         downloads_needed.append(("Image model (Z-Image-Turbo)", DEFAULT_Z_IMAGE_REPO))
     elif image_mode == LoadingMode.SDNQ:
-        downloads_needed.append(("Image model (SDNQ)", image_config.get("sdnq_model", DEFAULT_SDNQ_MODEL)))
+        downloads_needed.append(
+            ("Image model (SDNQ)", image_config.get("sdnq_model", DEFAULT_SDNQ_MODEL))
+        )
 
     if llm_mode == LLMMode.HF_DOWNLOAD:
         repo = llm_config.get("repo", DEFAULT_LLM_REPO)
@@ -394,7 +392,9 @@ def download_models(image_mode: LoadingMode, image_config: dict,
     ).ask()
 
     if not confirm:
-        console.print("[yellow]Download skipped. Models will download on first use.[/yellow]")
+        console.print(
+            "[yellow]Download skipped. Models will download on first use.[/yellow]"
+        )
         return True  # Not a failure, just deferred
 
     # Perform downloads
@@ -415,9 +415,13 @@ def download_models(image_mode: LoadingMode, image_config: dict,
                         repo,
                         local_files_only=False,
                     )
-                    progress.update(task, description=f"[green]✓ {name} downloaded[/green]")
+                    progress.update(
+                        task, description=f"[green]✓ {name} downloaded[/green]"
+                    )
                 except Exception as e:
-                    progress.update(task, description=f"[red]✗ {name} failed: {e}[/red]")
+                    progress.update(
+                        task, description=f"[red]✗ {name} failed: {e}[/red]"
+                    )
                     raise
 
         console.print("\n[green]All models downloaded successfully![/green]\n")
@@ -443,12 +447,16 @@ def verify_pipeline() -> tuple[bool, Optional[str]]:
             console=console,
         ) as progress:
             # Verify image model config
-            task = progress.add_task("[cyan]Checking image model configuration...", total=None)
+            task = progress.add_task(
+                "[cyan]Checking image model configuration...", total=None
+            )
             img_config = get_image_model_config()
             is_valid, errors = img_config.validate()
             if not is_valid:
                 return False, f"Image model config errors: {', '.join(errors)}"
-            progress.update(task, description="[green]✓ Image model configuration valid[/green]")
+            progress.update(
+                task, description="[green]✓ Image model configuration valid[/green]"
+            )
 
             # Verify LLM config
             task2 = progress.add_task("[cyan]Checking LLM configuration...", total=None)
@@ -456,13 +464,21 @@ def verify_pipeline() -> tuple[bool, Optional[str]]:
             is_valid, errors = llm_config.validate()
             if not is_valid:
                 return False, f"LLM config errors: {', '.join(errors)}"
-            progress.update(task2, description="[green]✓ LLM configuration valid[/green]")
+            progress.update(
+                task2, description="[green]✓ LLM configuration valid[/green]"
+            )
 
             # Try to import the pipeline class (doesn't load weights)
-            task3 = progress.add_task("[cyan]Checking diffusers installation...", total=None)
+            task3 = progress.add_task(
+                "[cyan]Checking diffusers installation...", total=None
+            )
             try:
                 from diffusers import ZImagePipeline  # noqa: F401
-                progress.update(task3, description="[green]✓ Diffusers ZImagePipeline available[/green]")
+
+                progress.update(
+                    task3,
+                    description="[green]✓ Diffusers ZImagePipeline available[/green]",
+                )
             except ImportError as e:
                 return False, f"Diffusers not properly installed: {e}"
 
@@ -484,7 +500,9 @@ def handle_verification_failure(error: str) -> str:
     choice = questionary.select(
         "What would you like to do?",
         choices=[
-            questionary.Choice("Continue anyway (may fail at runtime)", value="continue"),
+            questionary.Choice(
+                "Continue anyway (may fail at runtime)", value="continue"
+            ),
             questionary.Choice("Redo setup", value="redo"),
             questionary.Choice("Exit", value="exit"),
         ],
@@ -497,9 +515,9 @@ def handle_verification_failure(error: str) -> str:
 # Main Wizard Flow
 # =============================================================================
 
+
 def confirm_and_save(
-    image_mode: LoadingMode, image_config: dict,
-    llm_mode: LLMMode, llm_config: dict
+    image_mode: LoadingMode, image_config: dict, llm_mode: LLMMode, llm_config: dict
 ) -> bool:
     """Show summary and confirm save.
 
@@ -610,7 +628,9 @@ def run_wizard() -> bool:
             continue  # Redo setup
 
         # Step 3: Download models
-        download_success = download_models(image_mode, image_config, llm_mode, llm_config)
+        download_success = download_models(
+            image_mode, image_config, llm_mode, llm_config
+        )
 
         if not download_success:
             choice = handle_verification_failure("Model download failed")
@@ -632,7 +652,9 @@ def run_wizard() -> bool:
             # else: continue anyway
 
         # Success!
-        console.print("[bold green]Setup complete! You're ready to generate images.[/bold green]\n")
+        console.print(
+            "[bold green]Setup complete! You're ready to generate images.[/bold green]\n"
+        )
         return True
 
 
@@ -647,7 +669,9 @@ def run_wizard_if_needed() -> bool:
     if is_configured():
         return False
 
-    console.print("[yellow]No model configuration found. Starting setup wizard...[/yellow]\n")
+    console.print(
+        "[yellow]No model configuration found. Starting setup wizard...[/yellow]\n"
+    )
     return run_wizard()
 
 

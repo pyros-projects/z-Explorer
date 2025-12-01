@@ -1,9 +1,7 @@
 """Tests for the download service."""
 
-from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from z_explorer.services.download import (
     DownloadProgress,

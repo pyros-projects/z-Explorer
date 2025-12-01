@@ -1,9 +1,5 @@
 """Tests for model configuration and loading strategies."""
 
-import os
-import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 from z_explorer.model_config import (
     LoadingMode,
@@ -52,10 +48,7 @@ class TestImageModelConfig:
         """HF local mode path must exist."""
         # Use a path that definitely doesn't exist on any platform
         nonexistent = str(tmp_path / "this_path_definitely_does_not_exist_abc123")
-        config = ImageModelConfig(
-            mode=LoadingMode.HF_LOCAL,
-            hf_local_path=nonexistent
-        )
+        config = ImageModelConfig(mode=LoadingMode.HF_LOCAL, hf_local_path=nonexistent)
         is_valid, errors = config.validate()
         assert is_valid is False
         assert "does not exist" in errors[0]
@@ -66,8 +59,7 @@ class TestImageModelConfig:
         (tmp_path / "model_index.json").write_text("{}")
 
         config = ImageModelConfig(
-            mode=LoadingMode.HF_LOCAL,
-            hf_local_path=str(tmp_path)
+            mode=LoadingMode.HF_LOCAL, hf_local_path=str(tmp_path)
         )
         is_valid, errors = config.validate()
         assert is_valid is True
@@ -120,8 +112,14 @@ class TestGetImageModelConfig:
     def test_defaults_to_hf_download(self, monkeypatch):
         """Without any env vars, defaults to HF download."""
         # Clear all relevant env vars
-        for var in ["Z_IMAGE_MODE", "Z_IMAGE_HF", "Z_IMAGE_TRANSFORMER",
-                    "Z_IMAGE_TEXT_ENCODER", "Z_IMAGE_VAE", "Z_IMAGE_PATH"]:
+        for var in [
+            "Z_IMAGE_MODE",
+            "Z_IMAGE_HF",
+            "Z_IMAGE_TRANSFORMER",
+            "Z_IMAGE_TEXT_ENCODER",
+            "Z_IMAGE_VAE",
+            "Z_IMAGE_PATH",
+        ]:
             monkeypatch.delenv(var, raising=False)
 
         config = get_image_model_config()
@@ -188,7 +186,9 @@ class TestGetImageModelConfig:
         """Whitespace in paths should be stripped."""
         monkeypatch.setenv("Z_IMAGE_MODE", "components")
         monkeypatch.setenv("Z_IMAGE_TRANSFORMER", str(tmp_path / "t.safetensors"))
-        monkeypatch.setenv("Z_IMAGE_TEXT_ENCODER", f" {tmp_path}/te.safetensors ")  # Extra spaces
+        monkeypatch.setenv(
+            "Z_IMAGE_TEXT_ENCODER", f" {tmp_path}/te.safetensors "
+        )  # Extra spaces
         monkeypatch.setenv("Z_IMAGE_VAE", str(tmp_path / "v.safetensors"))
 
         config = get_image_model_config()
@@ -204,8 +204,13 @@ class TestIsConfigured:
         """Without any env vars, not configured."""
         # Must clear ALL indicator vars (both image and LLM)
         for var in [
-            "Z_IMAGE_MODE", "Z_IMAGE_HF", "Z_IMAGE_TRANSFORMER", "Z_IMAGE_PATH",
-            "LLM_MODE", "LLM_PATH", "LLM_REPO",
+            "Z_IMAGE_MODE",
+            "Z_IMAGE_HF",
+            "Z_IMAGE_TRANSFORMER",
+            "Z_IMAGE_PATH",
+            "LLM_MODE",
+            "LLM_PATH",
+            "LLM_REPO",
         ]:
             monkeypatch.delenv(var, raising=False)
 
@@ -277,6 +282,7 @@ class TestSaveConfig:
         assert "Z_IMAGE_TRANSFORMER" in content
         assert "Z_IMAGE_TEXT_ENCODER" in content
         assert "Z_IMAGE_VAE" in content
+
 
 class TestDefaultRepos:
     """Tests for default repository constants."""
