@@ -14,8 +14,9 @@ __pycache__
 .idea
 .cursor
 
-# Build artifacts
-dist
+# Build artifacts (but NOT gui dist - that's pre-built!)
+dist/
+!src/z_explorer/gui/dist/
 *.egg-info
 .pytest_cache
 .coverage
@@ -33,4 +34,3 @@ docs/
 
 # Node modules (GUI is pre-built)
 src/z_explorer/gui/node_modules
-
