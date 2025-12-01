@@ -4,12 +4,30 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/pyros-projects/z-Explorer/main/install.sh | bash
 #
+# With custom host (for servers/Docker):
+#   curl -fsSL ... | Z_EXPLORER_HOST=0.0.0.0 bash
+#
 # Or download and run:
 #   chmod +x install.sh && ./install.sh
+#   ./install.sh --host 0.0.0.0
 #
 # Note: macOS is NOT supported (bitsandbytes requires CUDA)
 
 set -e
+
+# Parse arguments
+HOST="${Z_EXPLORER_HOST:-127.0.0.1}"
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --host)
+            HOST="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
 
 echo "🔥 Z-Explorer Installer"
 echo "========================"
@@ -82,7 +100,7 @@ echo "🔧 Configuring with Quick Start defaults..."
 uv run z-explorer --quick-setup --show-config
 
 echo ""
-echo "🚀 Launching Z-Explorer (models will download automatically)..."
+echo "🚀 Launching Z-Explorer on $HOST (models will download automatically)..."
 echo ""
-uv run z-explorer
+uv run z-explorer --host "$HOST"
 

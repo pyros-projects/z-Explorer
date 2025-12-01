@@ -3,10 +3,21 @@
 # Usage (run in PowerShell):
 #   irm https://raw.githubusercontent.com/pyros-projects/z-Explorer/main/install.ps1 | iex
 #
+# With custom host (for servers/Docker):
+#   $env:Z_EXPLORER_HOST = "0.0.0.0"; irm ... | iex
+#
 # Or download and run:
 #   .\install.ps1
+#   .\install.ps1 -Host 0.0.0.0
+
+param(
+    [string]$Host = $null
+)
 
 $ErrorActionPreference = "Stop"
+
+# Determine host (parameter > env var > default)
+$HostParam = if ($Host) { $Host } elseif ($env:Z_EXPLORER_HOST) { $env:Z_EXPLORER_HOST } else { "127.0.0.1" }
 
 Write-Host "🔥 Z-Explorer Installer" -ForegroundColor Magenta
 Write-Host "========================" -ForegroundColor Magenta
@@ -88,9 +99,9 @@ Write-Host "🔧 Configuring with Quick Start defaults..." -ForegroundColor Cyan
 uv run z-explorer --quick-setup --show-config
 
 Write-Host ""
-Write-Host "🚀 Launching Z-Explorer (models will download automatically)..." -ForegroundColor Cyan
+Write-Host "🚀 Launching Z-Explorer on $HostParam (models will download automatically)..." -ForegroundColor Cyan
 Write-Host ""
-uv run z-explorer
+uv run z-explorer --host $HostParam
 
 Pop-Location
 
