@@ -57,6 +57,7 @@
   // Toggle history visibility
   function toggleHistory() {
     historyVisible = !historyVisible;
+    dispatch('historyToggle', { visible: historyVisible });
   }
 
   // Function to fetch version and config from backend
@@ -657,7 +658,7 @@
   $: currentFontSize = fontSizeMap[$settings.cli.fontSize] || '13px';
 </script>
 
-<div class="cli" style="font-size: {currentFontSize}">
+<div class="cli" class:history-hidden={!historyVisible} style="font-size: {currentFontSize}">
   <div class="history" class:hidden={!historyVisible} bind:this={historyEl}>
     <!-- Tutorial Section (at top) -->
     {#if $settings.cli.showTutorialOnStart || tutorialExpanded}
@@ -776,7 +777,7 @@
     </div>
   {/if}
 
-  <div class="input-area">
+  <div class="input-area" class:no-border={!historyVisible && !activeProgressBar}>
     <div class="input-line">
       <button
         class="history-toggle"
@@ -823,6 +824,10 @@
     flex-direction: column;
     font-family: var(--font-mono);
     /* font-size is set via inline style from settings */
+  }
+
+  .cli.history-hidden {
+    justify-content: flex-end;
   }
 
   .history {
@@ -990,6 +995,10 @@
     position: relative;
     border-top: 1px solid var(--border-color);
     background: var(--bg-tertiary);
+  }
+
+  .input-area.no-border {
+    border-top: none;
   }
 
   .input-line {
