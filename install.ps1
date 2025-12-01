@@ -56,6 +56,46 @@ try {
     }
 }
 
+# Check for Node.js (needed to build the GUI)
+try {
+    $null = Get-Command node -ErrorAction Stop
+    $nodeVersion = node --version
+    Write-Host "✓ Node.js already installed ($nodeVersion)" -ForegroundColor Green
+} catch {
+    Write-Host "📦 Installing Node.js (needed for GUI)..." -ForegroundColor Cyan
+
+    $nodeInstalled = $false
+
+    # Try winget first
+    try {
+        $null = Get-Command winget -ErrorAction Stop
+        winget install OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+        $null = Get-Command node -ErrorAction Stop
+        $nodeInstalled = $true
+        Write-Host "✓ Node.js installed via winget" -ForegroundColor Green
+    } catch {
+        # Try chocolatey
+        try {
+            $null = Get-Command choco -ErrorAction Stop
+            choco install nodejs-lts -y
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            $null = Get-Command node -ErrorAction Stop
+            $nodeInstalled = $true
+            Write-Host "✓ Node.js installed via chocolatey" -ForegroundColor Green
+        } catch {
+            # Manual install required
+        }
+    }
+
+    if (-not $nodeInstalled) {
+        Write-Host "⚠️  Could not install Node.js automatically." -ForegroundColor Yellow
+        Write-Host "   Please install Node.js manually: https://nodejs.org/" -ForegroundColor Yellow
+        Write-Host "   The GUI will not be available without Node.js." -ForegroundColor Yellow
+        Write-Host ""
+    }
+}
+
 # Determine install directory (installs in current directory by default)
 $InstallDir = if ($env:Z_EXPLORER_DIR) { $env:Z_EXPLORER_DIR } else { "$(Get-Location)\z-Explorer" }
 

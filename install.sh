@@ -34,10 +34,10 @@ fi
 if ! command -v uv &> /dev/null; then
     echo "📦 Installing uv (fast Python package manager)..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    
+
     # Add to PATH for this session
     export PATH="$HOME/.local/bin:$PATH"
-    
+
     # Verify installation
     if ! command -v uv &> /dev/null; then
         echo "❌ Failed to install uv. Please install manually: https://docs.astral.sh/uv/"
@@ -46,6 +46,36 @@ if ! command -v uv &> /dev/null; then
     echo "✓ uv installed"
 else
     echo "✓ uv already installed"
+fi
+
+# Check for Node.js (needed to build the GUI)
+if ! command -v node &> /dev/null; then
+    echo "📦 Installing Node.js (needed for GUI)..."
+
+    # Try to install Node.js via package manager or NodeSource
+    if command -v apt-get &> /dev/null; then
+        # Debian/Ubuntu - use NodeSource LTS
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - 2>/dev/null || true
+        sudo apt-get install -y nodejs 2>/dev/null || apt-get install -y nodejs 2>/dev/null || true
+    elif command -v dnf &> /dev/null; then
+        # Fedora/RHEL
+        sudo dnf install -y nodejs npm 2>/dev/null || dnf install -y nodejs npm 2>/dev/null || true
+    elif command -v pacman &> /dev/null; then
+        # Arch Linux
+        sudo pacman -S --noconfirm nodejs npm 2>/dev/null || pacman -S --noconfirm nodejs npm 2>/dev/null || true
+    fi
+
+    # Verify installation
+    if command -v node &> /dev/null; then
+        echo "✓ Node.js installed ($(node --version))"
+    else
+        echo "⚠️  Could not install Node.js automatically."
+        echo "   Please install Node.js manually: https://nodejs.org/"
+        echo "   The GUI will not be available without Node.js."
+        echo ""
+    fi
+else
+    echo "✓ Node.js already installed ($(node --version))"
 fi
 
 # Clone repository (installs in current directory by default)
