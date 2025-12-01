@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+.env
+
+# IDE
+.vscode
+.idea
+.cursor
+
+# Build artifacts
+dist
+*.egg-info
+.pytest_cache
+.coverage
+htmlcov
+
+# Output (user should mount their own)
+output/
+logs/
+
+# Dev files
+tests/
+docs/
+*.md
+!README.md
+
+# Node modules (GUI is pre-built)
+src/z_explorer/gui/node_modules
+

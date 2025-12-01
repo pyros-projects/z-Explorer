@@ -1,0 +1,96 @@
+:root {
+  /* Z-Explorer Dark Theme - Purple to Cyan */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a24;
+  --bg-card: #14141e;
+  
+  --text-primary: #f0f0f5;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  /* Brand colors - Purple to Cyan gradient feel */
+  --accent-purple: #a855f7;
+  --accent-cyan: #22d3ee;
+  --accent-primary: #8b5cf6;
+  --accent-secondary: #06b6d4;
+  --accent-glow: rgba(139, 92, 246, 0.25);
+  --accent-glow-cyan: rgba(34, 211, 238, 0.2);
+  
+  /* Gradient accents */
+  --gradient-brand: linear-gradient(135deg, #a855f7 0%, #22d3ee 100%);
+  --gradient-brand-reverse: linear-gradient(135deg, #22d3ee 0%, #a855f7 100%);
+  --gradient-subtle: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(34, 211, 238, 0.1) 100%);
+  
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  
+  --border-color: rgba(139, 92, 246, 0.2);
+  --border-radius: 10px;
+  
+  /* Typography */
+  --font-sans: 'Inter', 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent-purple), var(--accent-cyan));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* Selection */
+::selection {
+  background: var(--accent-purple);
+  color: white;
+}
+
+/* Utility classes */
+.gradient-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 20px var(--accent-glow-cyan);
+}
