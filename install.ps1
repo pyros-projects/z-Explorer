@@ -83,20 +83,14 @@ Write-Host "  cd $InstallDir" -ForegroundColor White
 Write-Host "  uv run z-explorer" -ForegroundColor White
 Write-Host ""
 
-# Run quick setup (configures with sensible defaults)
+# Run quick setup and launch (downloads models automatically)
 Write-Host "🔧 Configuring with Quick Start defaults..." -ForegroundColor Cyan
 uv run z-explorer --quick-setup --show-config
 
 Write-Host ""
-Write-Host "✅ Configuration complete!" -ForegroundColor Green
-Write-Host "   First run will download ~10GB of models (one-time)." -ForegroundColor Cyan
+Write-Host "🚀 Launching Z-Explorer (models will download automatically)..." -ForegroundColor Cyan
 Write-Host ""
-
-# Ask if user wants to run now
-$response = Read-Host "🚀 Run Z-Explorer now? [Y/n]"
-if ($response -eq "" -or $response -match "^[Yy]") {
-    uv run z-explorer
-}
+uv run z-explorer
 
 Pop-Location
 

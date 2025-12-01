@@ -77,19 +77,12 @@ echo "Or add an alias to your shell config:"
 echo "  alias z-explorer='cd $INSTALL_DIR && uv run z-explorer'"
 echo ""
 
-# Run quick setup (configures with sensible defaults)
+# Run quick setup and launch (downloads models automatically)
 echo "🔧 Configuring with Quick Start defaults..."
 uv run z-explorer --quick-setup --show-config
 
 echo ""
-echo "✅ Configuration complete!"
-echo "   First run will download ~10GB of models (one-time)."
+echo "🚀 Launching Z-Explorer (models will download automatically)..."
 echo ""
-
-# Ask if user wants to run now
-read -p "🚀 Run Z-Explorer now? [Y/n] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-    uv run z-explorer
-fi
+uv run z-explorer
 
