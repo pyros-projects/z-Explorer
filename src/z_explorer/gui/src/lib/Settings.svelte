@@ -90,7 +90,151 @@
   let testingConnection = false;
   let testResult: { valid: boolean; message: string } | null = null;
   let reloadingModels = false;
-  let reloadResult: { status: string; message?: string } | null = null;
+  let reloadResult: { status: string; message?: string; duration_ms?: number } | null = null;
+  let loadingServerConfig = false;
+
+  // Download state
+  let isDownloading = false;
+  let downloadProgress: {
+    model_name: string;
+    status: string;
+    progress_percent: number;
+    current_file?: string;
+    speed_mbps?: number;
+    eta_seconds?: number;
+    error?: string;
+  } | null = null;
+  let downloadError: string | null = null;
+  let modelsToDownload: { image_repo?: string; llm_repo?: string } | null = null;
+
+  // Fetch current model config from server
+  async function fetchServerConfig() {
+    loadingServerConfig = true;
+    try {
+      const response = await fetch('/api/config');
+      if (response.ok) {
+        const config = await response.json();
+        // Update local state with server config
+        imageMode = config.image_mode || 'hf_download';
+        llmMode = config.llm_mode || 'hf_download';
+
+        // Set repo/path based on mode
+        if (config.image_mode === 'hf_download' || config.image_mode === 'sdnq') {
+          imageRepo = config.image_model || '';
+          imagePath = '';
+        } else {
+          imagePath = config.image_model || '';
+          imageRepo = '';
+        }
+
+        if (config.llm_mode === 'hf_download') {
+          llmRepo = config.llm_model || '';
+          llmPath = '';
+        } else if (config.llm_mode === 'z_image') {
+          llmRepo = '';
+          llmPath = '';
+        } else {
+          llmPath = config.llm_model || '';
+          llmRepo = '';
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch server config:', e);
+    } finally {
+      loadingServerConfig = false;
+    }
+  }
+
+  // Check if selected models need downloading
+  async function checkModelsNeedDownload(): Promise<{ image_repo?: string; llm_repo?: string } | null> {
+    try {
+      const response = await fetch('/api/settings/models/check-cache', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_mode: imageMode,
+          image_repo: imageRepo || null,
+          llm_mode: llmMode,
+          llm_repo: llmRepo || null,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.needs_download) {
+          return {
+            image_repo: !result.image_cached ? result.image_repo : undefined,
+            llm_repo: !result.llm_cached ? result.llm_repo : undefined,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Could not check model cache:', e);
+    }
+    return null;
+  }
+
+  // Download models with progress
+  async function downloadModels(repos: { image_repo?: string; llm_repo?: string }): Promise<boolean> {
+    isDownloading = true;
+    downloadProgress = null;
+    downloadError = null;
+
+    return new Promise((resolve) => {
+      const params = new URLSearchParams();
+      if (repos.image_repo) params.set('image_repo', repos.image_repo);
+      if (repos.llm_repo) params.set('llm_repo', repos.llm_repo);
+
+      const eventSource = new EventSource(`/api/settings/models/download?${params}`);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Final status event
+          if (data.status === 'all_complete') {
+            eventSource.close();
+            isDownloading = false;
+            downloadProgress = null;
+            resolve(true);
+            return;
+          }
+
+          if (data.status === 'error' && data.success === false) {
+            eventSource.close();
+            isDownloading = false;
+            downloadError = data.message || 'Download failed';
+            resolve(false);
+            return;
+          }
+
+          // Progress update
+          downloadProgress = {
+            model_name: data.model_name || '',
+            status: data.status || '',
+            progress_percent: data.progress_percent || 0,
+            current_file: data.current_file,
+            speed_mbps: data.speed_mbps,
+            eta_seconds: data.eta_seconds,
+            error: data.error,
+          };
+
+          if (data.error) {
+            downloadError = data.error;
+          }
+        } catch (e) {
+          console.error('Error parsing download progress:', e);
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        isDownloading = false;
+        downloadError = 'Connection to server lost';
+        resolve(false);
+      };
+    });
+  }
 
   // Initialize local settings when dialog opens
   $: if (open) {
@@ -101,13 +245,13 @@
     // Reset model states
     testResult = null;
     reloadResult = null;
-    // Initialize from settings store
-    imageMode = localSettings.models.imageMode || 'hf_download';
-    imageRepo = localSettings.models.imageRepo || '';
-    imagePath = localSettings.models.imagePath || '';
-    llmMode = localSettings.models.llmMode || 'hf_download';
-    llmRepo = localSettings.models.llmRepo || '';
-    llmPath = localSettings.models.llmPath || '';
+    // Reset download states
+    isDownloading = false;
+    downloadProgress = null;
+    downloadError = null;
+    modelsToDownload = null;
+    // Fetch current config from server (will update model fields)
+    fetchServerConfig();
   }
 
   // Validate thumbnail height
@@ -158,9 +302,25 @@
   // Check if there are validation errors
   $: hasErrors = thumbnailError !== '';
 
-  // Handle Save
-  function handleSave() {
-    if (hasErrors) return;
+  // Handle Save - checks if models need download first
+  async function handleSave() {
+    if (hasErrors || isDownloading) return;
+
+    // Check if we're on Models tab and models need downloading
+    if (activeTab === 'models') {
+      const needsDownload = await checkModelsNeedDownload();
+      if (needsDownload && (needsDownload.image_repo || needsDownload.llm_repo)) {
+        modelsToDownload = needsDownload;
+        // Start download - dialog stays open
+        const success = await downloadModels(needsDownload);
+        if (!success) {
+          // Download failed - stay on dialog to show error
+          return;
+        }
+        // Download succeeded - apply model config and reload
+        await applyModelConfigAndReload();
+      }
+    }
 
     // Commit changes to store
     updateGallery(localSettings.gallery);
@@ -168,6 +328,40 @@
     updateGeneration(localSettings.generation);
 
     onClose();
+  }
+
+  // Apply model configuration to server and reload models
+  async function applyModelConfigAndReload() {
+    try {
+      // Update server config
+      await fetch('/api/settings/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_mode: imageMode,
+          image_repo: imageRepo || null,
+          image_path: imagePath || null,
+          llm_mode: llmMode,
+          llm_repo: llmRepo || null,
+          llm_path: llmPath || null,
+        }),
+      });
+
+      // Reload models
+      await fetch('/api/models/reload', { method: 'POST' });
+
+      // Update local settings store
+      localSettings.models = {
+        imageMode,
+        imageRepo,
+        imagePath,
+        llmMode,
+        llmRepo,
+        llmPath,
+      };
+    } catch (e) {
+      console.error('Failed to apply model config:', e);
+    }
   }
 
   // Handle Cancel
@@ -597,6 +791,12 @@
           </div>
         {:else if activeTab === 'models'}
           <div class="tab-panel" role="tabpanel">
+            {#if loadingServerConfig}
+              <div class="loading-config">
+                <span class="spinner"></span>
+                <span>Loading current configuration...</span>
+              </div>
+            {/if}
             <!-- Image Model Section -->
             <div class="setting-group">
               <h3>Image Model</h3>
@@ -725,6 +925,40 @@
                 💡 Changes override your .env configuration for this session only.
                 They are stored in localStorage and do NOT modify your .env file.
               </p>
+
+              <!-- Download Progress UI -->
+              {#if isDownloading && downloadProgress}
+                <div class="download-progress-container">
+                  <div class="download-header">
+                    <span class="download-icon">⬇️</span>
+                    <span class="download-title">Downloading {downloadProgress.model_name}</span>
+                  </div>
+                  <div class="download-progress-bar">
+                    <div
+                      class="download-progress-fill"
+                      style="width: {downloadProgress.progress_percent}%"
+                    ></div>
+                  </div>
+                  <div class="download-stats">
+                    <span class="download-percent">{downloadProgress.progress_percent.toFixed(1)}%</span>
+                    {#if downloadProgress.speed_mbps}
+                      <span class="download-speed">{downloadProgress.speed_mbps.toFixed(1)} MB/s</span>
+                    {/if}
+                    {#if downloadProgress.eta_seconds}
+                      <span class="download-eta">~{Math.ceil(downloadProgress.eta_seconds)}s remaining</span>
+                    {/if}
+                  </div>
+                  {#if downloadProgress.current_file}
+                    <div class="download-file">{downloadProgress.current_file}</div>
+                  {/if}
+                </div>
+              {/if}
+
+              {#if downloadError}
+                <div class="result-message error">
+                  ✗ Download failed: {downloadError}
+                </div>
+              {/if}
             </div>
           </div>
         {/if}
@@ -732,15 +966,19 @@
 
       <!-- Footer -->
       <div class="settings-footer">
-        <button class="btn btn-secondary" on:click={handleResetClick}>
+        <button class="btn btn-secondary" on:click={handleResetClick} disabled={isDownloading}>
           Reset to Defaults
         </button>
         <div class="footer-right">
-          <button class="btn btn-ghost" on:click={handleCancel}>
+          <button class="btn btn-ghost" on:click={handleCancel} disabled={isDownloading}>
             Cancel
           </button>
-          <button class="btn btn-primary" on:click={handleSave} disabled={hasErrors}>
-            Save
+          <button class="btn btn-primary" on:click={handleSave} disabled={hasErrors || isDownloading}>
+            {#if isDownloading}
+              Downloading...
+            {:else}
+              Save
+            {/if}
           </button>
         </div>
       </div>
@@ -1113,6 +1351,32 @@
   }
 
   /* Models Tab Styles */
+  .loading-config {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(139, 92, 246, 0.3);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   .model-config {
     display: flex;
     flex-direction: column;
@@ -1189,6 +1453,109 @@
     color: var(--text-muted);
     line-height: 1.5;
     margin-top: 8px;
+  }
+
+  /* Download Progress Styles */
+  .download-progress-container {
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    border-radius: 12px;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .download-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .download-icon {
+    font-size: 18px;
+    animation: bounce 1s ease infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  .download-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .download-progress-bar {
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .download-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    position: relative;
+  }
+
+  .download-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .download-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .download-percent {
+    font-weight: 600;
+    color: var(--accent-cyan);
+  }
+
+  .download-speed {
+    color: var(--text-muted);
+  }
+
+  .download-eta {
+    color: var(--text-muted);
+  }
+
+  .download-file {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   /* Footer */

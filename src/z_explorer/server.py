@@ -17,28 +17,28 @@ Usage:
 import asyncio
 import json
 import sys
-from pathlib import Path
-from typing import Optional, Literal
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Literal, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, FileResponse
+from loguru import logger
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
-from loguru import logger
 
+from z_explorer.cli import __version__
+from z_explorer.core.generator import generate
 from z_explorer.core.types import (
     GenerationRequest,
     GenerationResult,
-    ProgressEvent,
     GpuInfo,
+    ProgressEvent,
     VariableInfo,
 )
-from z_explorer.core.generator import generate
-from z_explorer.cli import __version__
 
 # Configure loguru for server
 logger.remove()  # Remove default handler
@@ -282,10 +282,10 @@ async def get_model_config():
     """
     try:
         from z_explorer.model_config import (
+            LLMMode,
+            LoadingMode,
             get_image_model_config,
             get_llm_config,
-            LoadingMode,
-            LLMMode,
         )
 
         img_config = get_image_model_config()
@@ -348,8 +348,8 @@ async def get_setup_status():
     try:
         from z_explorer.model_config import is_configured
         from z_explorer.services.download import (
-            get_models_to_download,
             check_models_downloaded,
+            get_models_to_download,
         )
 
         configured = is_configured()
@@ -381,7 +381,7 @@ async def _download_event_stream():
     import queue
     import threading
 
-    from z_explorer.services.download import download_all_models, DownloadProgress
+    from z_explorer.services.download import DownloadProgress, download_all_models
 
     progress_queue: queue.Queue[DownloadProgress] = queue.Queue()
     download_complete = threading.Event()
@@ -580,10 +580,10 @@ def _get_active_model_config() -> ModelConfigResponse:
     """Get current active model configuration (with overrides applied)."""
     try:
         from z_explorer.model_config import (
+            LLMMode,
+            LoadingMode,
             get_active_image_config,
             get_active_llm_config,
-            LoadingMode,
-            LLMMode,
         )
 
         img_config = get_active_image_config()
@@ -646,7 +646,7 @@ async def update_model_settings(request: ModelSettingsUpdate):
     Accepts partial updates - only provided fields are updated.
     Pass null to clear a specific override.
     """
-    from z_explorer.model_config import set_override_config, clear_override_config
+    from z_explorer.model_config import clear_override_config, set_override_config
 
     # Validate image_mode if provided
     if request.image_mode is not None and request.image_mode not in VALID_IMAGE_MODES:
@@ -787,6 +787,158 @@ async def test_model_config(request: ModelTestRequest):
     return ModelTestResponse(
         valid=True,
         message="Configuration appears valid",
+    )
+
+
+class ModelCacheCheckRequest(BaseModel):
+    """Request to check if specific models are cached."""
+
+    image_mode: Optional[str] = None
+    image_repo: Optional[str] = None
+    llm_mode: Optional[str] = None
+    llm_repo: Optional[str] = None
+
+
+class ModelCacheCheckResponse(BaseModel):
+    """Response indicating which models need downloading."""
+
+    image_cached: bool = True
+    image_repo: Optional[str] = None
+    llm_cached: bool = True
+    llm_repo: Optional[str] = None
+    needs_download: bool = False
+
+
+@app.post("/api/settings/models/check-cache", response_model=ModelCacheCheckResponse)
+async def check_model_cache(request: ModelCacheCheckRequest):
+    """Check if the specified models are already cached locally.
+
+    Used by Settings dialog to determine if download is needed before save.
+    """
+    from huggingface_hub import scan_cache_dir
+
+    try:
+        cache_info = scan_cache_dir()
+        cached_repos = {repo.repo_id for repo in cache_info.repos}
+    except Exception:
+        cached_repos = set()
+
+    result = ModelCacheCheckResponse()
+
+    # Check image model
+    if request.image_mode in ("hf_download", "sdnq") and request.image_repo:
+        result.image_repo = request.image_repo
+        result.image_cached = request.image_repo in cached_repos
+
+    # Check LLM
+    if request.llm_mode == "hf_download" and request.llm_repo:
+        result.llm_repo = request.llm_repo
+        result.llm_cached = request.llm_repo in cached_repos
+
+    result.needs_download = not result.image_cached or not result.llm_cached
+
+    return result
+
+
+async def _download_specific_models_stream(
+    image_repo: Optional[str],
+    llm_repo: Optional[str],
+):
+    """SSE stream for downloading specific models."""
+    import queue
+    import threading
+
+    from z_explorer.services.download import (
+        DownloadProgress,
+        download_model_with_progress,
+    )
+
+    progress_queue: queue.Queue[DownloadProgress] = queue.Queue()
+    download_complete = threading.Event()
+    download_result = [True]
+    download_error = [None]
+
+    def on_progress(progress: DownloadProgress):
+        progress_queue.put(progress)
+
+    def do_downloads():
+        try:
+            # Download image model if specified
+            if image_repo:
+                success = download_model_with_progress(
+                    model_name=image_repo,
+                    repo_id=image_repo,
+                    on_progress=on_progress,
+                )
+                if not success:
+                    download_result[0] = False
+                    return
+
+            # Download LLM if specified
+            if llm_repo:
+                success = download_model_with_progress(
+                    model_name=llm_repo,
+                    repo_id=llm_repo,
+                    on_progress=on_progress,
+                )
+                if not success:
+                    download_result[0] = False
+                    return
+
+        except Exception as e:
+            logger.error(f"Download failed: {e}")
+            download_error[0] = str(e)
+            download_result[0] = False
+        finally:
+            download_complete.set()
+
+    # Start downloads in background
+    download_thread = threading.Thread(target=do_downloads)
+    download_thread.start()
+
+    # Stream progress
+    while not download_complete.is_set():
+        try:
+            progress = progress_queue.get_nowait()
+            yield {"data": json.dumps(progress.to_dict())}
+        except queue.Empty:
+            await asyncio.sleep(0.1)
+            continue
+
+    # Drain remaining
+    while not progress_queue.empty():
+        try:
+            progress = progress_queue.get_nowait()
+            yield {"data": json.dumps(progress.to_dict())}
+        except queue.Empty:
+            break
+
+    download_thread.join()
+
+    # Final status
+    final_error = download_error[0]
+    final_status = {
+        "status": "all_complete" if download_result[0] else "error",
+        "success": download_result[0],
+    }
+    if not download_result[0] and final_error:
+        final_status["message"] = final_error
+
+    yield {"data": json.dumps(final_status)}
+
+
+@app.get("/api/settings/models/download")
+async def download_specific_models(
+    image_repo: Optional[str] = None,
+    llm_repo: Optional[str] = None,
+):
+    """Download specific models with SSE progress streaming.
+
+    Used by Settings dialog when saving config with uncached models.
+    """
+    return EventSourceResponse(
+        _download_specific_models_stream(image_repo, llm_repo),
+        ping=1,
     )
 
 
