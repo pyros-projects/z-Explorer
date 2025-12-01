@@ -48,8 +48,8 @@ else
     echo "✓ uv already installed"
 fi
 
-# Clone repository
-INSTALL_DIR="${Z_EXPLORER_DIR:-$HOME/z-Explorer}"
+# Clone repository (installs in current directory by default)
+INSTALL_DIR="${Z_EXPLORER_DIR:-$(pwd)/z-Explorer}"
 
 if [ -d "$INSTALL_DIR" ]; then
     echo "📁 Directory $INSTALL_DIR already exists"

@@ -56,8 +56,8 @@ try {
     }
 }
 
-# Determine install directory
-$InstallDir = if ($env:Z_EXPLORER_DIR) { $env:Z_EXPLORER_DIR } else { "$env:USERPROFILE\z-Explorer" }
+# Determine install directory (installs in current directory by default)
+$InstallDir = if ($env:Z_EXPLORER_DIR) { $env:Z_EXPLORER_DIR } else { "$(Get-Location)\z-Explorer" }
 
 # Clone or update repository
 if (Test-Path $InstallDir) {
