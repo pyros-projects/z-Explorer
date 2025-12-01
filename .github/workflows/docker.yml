@@ -13,7 +13,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # ghcr.io requires lowercase image names
+  IMAGE_NAME: ${{ github.repository_owner }}/z-explorer
 
 jobs:
   build-and-push:
@@ -21,6 +22,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      attestations: write
+      id-token: write
 
     steps:
       - name: Checkout repository
