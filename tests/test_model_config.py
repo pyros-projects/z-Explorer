@@ -50,9 +50,11 @@ class TestImageModelConfig:
 
     def test_hf_local_mode_path_must_exist(self, tmp_path):
         """HF local mode path must exist."""
+        # Use a path that definitely doesn't exist on any platform
+        nonexistent = str(tmp_path / "this_path_definitely_does_not_exist_abc123")
         config = ImageModelConfig(
             mode=LoadingMode.HF_LOCAL,
-            hf_local_path="/nonexistent/path"
+            hf_local_path=nonexistent
         )
         is_valid, errors = config.validate()
         assert is_valid is False

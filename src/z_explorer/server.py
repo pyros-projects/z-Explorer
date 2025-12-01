@@ -366,51 +366,73 @@ async def _download_event_stream():
     """SSE event stream for model download progress."""
     import queue
     import threading
-    
+
     from z_explorer.services.download import download_all_models, DownloadProgress
-    
+
     progress_queue: queue.Queue[DownloadProgress] = queue.Queue()
     download_complete = threading.Event()
     download_result = [False]  # Use list to allow mutation in thread
-    
+    download_error = [None]  # Track error message for final status
+
     def on_progress(progress: DownloadProgress):
         progress_queue.put(progress)
-    
+
     def do_download():
         try:
             download_result[0] = download_all_models(on_progress=on_progress)
         except Exception as e:
             logger.error(f"Download failed: {e}")
+            download_error[0] = str(e)
         finally:
             download_complete.set()
-    
+
     # Start download in background thread
     download_thread = threading.Thread(target=do_download)
     download_thread.start()
-    
-    # Stream progress events
+
+    last_error = None  # Track last error from progress updates
+
+    # Stream progress events (non-blocking to keep event loop responsive)
     while not download_complete.is_set():
+        # Use non-blocking get + async sleep to avoid blocking the event loop
         try:
-            progress = progress_queue.get(timeout=0.2)
-            yield {"data": json.dumps(progress.to_dict())}
+            progress = progress_queue.get_nowait()
+            progress_dict = progress.to_dict()
+            # Capture error message from progress
+            if progress_dict.get("error"):
+                last_error = progress_dict["error"]
+            yield {"data": json.dumps(progress_dict)}
         except queue.Empty:
+            # Yield control back to event loop instead of blocking
+            await asyncio.sleep(0.1)
             continue
-    
+
     # Drain remaining events
     while not progress_queue.empty():
         try:
             progress = progress_queue.get_nowait()
-            yield {"data": json.dumps(progress.to_dict())}
+            progress_dict = progress.to_dict()
+            # Capture error message from progress
+            if progress_dict.get("error"):
+                last_error = progress_dict["error"]
+            yield {"data": json.dumps(progress_dict)}
         except queue.Empty:
             break
-    
+
     download_thread.join()
-    
-    # Send final status
-    yield {"data": json.dumps({
+
+    # Determine final error message
+    final_error = download_error[0] or last_error
+
+    # Send final status with error message if failed
+    final_status = {
         "status": "all_complete" if download_result[0] else "error",
         "success": download_result[0],
-    })}
+    }
+    if not download_result[0] and final_error:
+        final_status["message"] = final_error
+
+    yield {"data": json.dumps(final_status)}
 
 
 @app.get("/api/setup/download")

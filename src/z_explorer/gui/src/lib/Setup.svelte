@@ -37,6 +37,7 @@
   let completedModels: string[] = [];
   
   let eventSource: EventSource | null = null;
+  let receivedFinalStatus = false;  // Track if we got a proper completion/error status
 
   function formatBytes(bytes: number): string {
     if (bytes === 0) return '0 B';
@@ -75,11 +76,12 @@
 
   function startDownload() {
     if (isDownloading) return;
-    
+
     isDownloading = true;
     hasError = false;
     errorMessage = '';
     completedModels = [];
+    receivedFinalStatus = false;
     
     eventSource = new EventSource(`${apiBase}/api/setup/download`);
     
@@ -88,8 +90,13 @@
         const data = JSON.parse(event.data);
         
         if (data.status === 'all_complete' || data.status === 'error') {
+          receivedFinalStatus = true;  // Mark that we got a proper final status
           downloadComplete = data.success;
           hasError = !data.success;
+          // Capture error message from final status (don't overwrite if already set)
+          if (!data.success && data.message && !errorMessage) {
+            errorMessage = data.message;
+          }
           isDownloading = false;
           eventSource?.close();
           return;
@@ -115,10 +122,14 @@
     };
     
     eventSource.onerror = (error) => {
-      console.error('Download SSE error:', error);
-      hasError = true;
-      errorMessage = 'Connection to server lost';
-      isDownloading = false;
+      // SSE fires onerror when connection closes, even on normal completion
+      // Only treat as error if we didn't receive a proper final status
+      if (!receivedFinalStatus) {
+        console.error('Download SSE error:', error);
+        hasError = true;
+        errorMessage = 'Connection to server lost';
+        isDownloading = false;
+      }
       eventSource?.close();
     };
   }
@@ -192,11 +203,21 @@
             </div>
             
             <div class="progress-bar-container">
-              <div class="progress-bar" style="width: {currentProgress.progress_percent}%"></div>
+              <div
+                class="progress-bar"
+                class:indeterminate={currentProgress.progress_percent < 1 && currentProgress.status === 'downloading'}
+                style="width: {currentProgress.progress_percent > 0 ? currentProgress.progress_percent : 100}%"
+              ></div>
             </div>
-            
+
             <div class="progress-details">
-              <span class="progress-percent">{currentProgress.progress_percent.toFixed(1)}%</span>
+              <span class="progress-percent">
+                {#if currentProgress.progress_percent > 0}
+                  {currentProgress.progress_percent.toFixed(1)}%
+                {:else}
+                  Downloading...
+                {/if}
+              </span>
               {#if currentProgress.bytes_total > 0}
                 <span class="progress-size">
                   {formatBytes(currentProgress.bytes_done)} / {formatBytes(currentProgress.bytes_total)}
@@ -541,6 +562,25 @@
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
+  }
+
+  /* Indeterminate progress bar animation when we don't have real progress data */
+  .progress-bar.indeterminate {
+    background: linear-gradient(
+      90deg,
+      var(--accent-purple) 0%,
+      var(--accent-cyan) 25%,
+      var(--accent-purple) 50%,
+      var(--accent-cyan) 75%,
+      var(--accent-purple) 100%
+    );
+    background-size: 200% 100%;
+    animation: indeterminate-flow 2s linear infinite;
+  }
+
+  @keyframes indeterminate-flow {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 
   .progress-details {
