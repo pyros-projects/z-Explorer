@@ -11,8 +11,9 @@ This directory contains formal specifications for Z-Explorer features and enhanc
 | [003](./003-gallery-search/) | Gallery Search | ✅ Ready | ~6h | 002 |
 | [004](./004-litellm-integration/) | LiteLLM Integration | ✅ Ready | ~5.5h | None |
 | [005](./005-variable-editor/) | Variable Editor | ✅ Ready | ~7-8h | 004 (AI features) |
+| [006](./006-lora-support/) | LoRA Support | ✅ Ready | ~7-13h | None |
 
-**Total Estimated Effort**: ~37-41 hours
+**Total Estimated Effort**: ~44-54 hours
 
 ---
 
@@ -105,6 +106,24 @@ This directory contains formal specifications for Z-Explorer features and enhanc
 
 ---
 
+### 006: LoRA Support ✅
+
+**What**: Apply LoRA style adapters using familiar batch parameter syntax (`: lora:weight`).
+
+**Why**: Users wanting consistent visual styles must use complex tools (ComfyUI, A1111). LoRAs enable style consistency with zero friction.
+
+**Key Deliverables**:
+- Drop-in LoRA discovery (`loras/` folder)
+- Prompt syntax: `a cat : anime:0.8, x3`
+- Multiple LoRA support (up to 4)
+- Directory configuration (LORA_DIR)
+- `/loras` command and autocomplete
+- Optional `loras.yaml` for metadata
+
+**Confidence**: 🟢 High — Ready to ship
+
+---
+
 ## Other Folders
 
 ### [concepts/](./concepts/)
@@ -126,7 +145,9 @@ Design explorations and mockups that inform specifications:
                                                      │
 004 LiteLLM Integration ──────────────────────────────┤
      │                                               │
-     └──→ 005 Variable Editor (AI features) ─────────┘
+     └──→ 005 Variable Editor (AI features) ─────────┤
+                                                     │
+006 LoRA Support (standalone) ───────────────────────┘
 ```
 
 ---
@@ -135,14 +156,15 @@ Design explorations and mockups that inform specifications:
 
 Based on dependencies and value delivery:
 
-1. **004 LiteLLM** (~5.5h) — Foundation for AI features, no dependencies
-2. **002 Info Flyout** (~8-9h) — Metadata foundation for search, no dependencies
-3. **003 Gallery Search** (~6h) — Quick win, requires 002
-4. **005 Variable Editor** (~7-8h) — Uses 004's LLM config
-5. **001 UI Settings** (~10-12h) — Largest scope, can be done anytime
+1. **006 LoRA Support** (~7-13h) — Core generation enhancement, high user value, no dependencies
+2. **004 LiteLLM** (~5.5h) — Foundation for AI features, no dependencies
+3. **002 Info Flyout** (~8-9h) — Metadata foundation for search, no dependencies
+4. **003 Gallery Search** (~6h) — Quick win, requires 002
+5. **005 Variable Editor** (~7-8h) — Uses 004's LLM config
+6. **001 UI Settings** (~10-12h) — Largest scope, can be done anytime
 
 **Parallel opportunities**:
-- 004 and 002 can be developed simultaneously
+- 006, 004, and 002 can all be developed simultaneously (no dependencies)
 - 001 can be developed in parallel with anything
 
 ---
@@ -158,6 +180,7 @@ Based on dependencies and value delivery:
 | 003 | ✅ | ✅ | ✅ | ✅ | **Go** |
 | 004 | ✅ | ✅ | ✅ | ✅ | **Go** |
 | 005 | ✅ | ✅ | ✅ | ✅ | **Go** |
+| 006 | ✅ | ✅ | ✅ | ✅ | **Go** |
 
 **Verdict: 🟢 DEV-READY** — All specifications complete with full documentation.
 
