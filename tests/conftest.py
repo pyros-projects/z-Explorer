@@ -1,10 +1,11 @@
 """Shared test fixtures for Z-Explorer tests."""
 
-import pytest
-from unittest.mock import patch
-from PIL import Image
-import tempfile
 import os
+import tempfile
+from unittest.mock import patch
+
+import pytest
+from PIL import Image
 
 
 @pytest.fixture
@@ -71,8 +72,8 @@ def temp_library(tmp_path):
 
 @pytest.fixture
 def mock_current_dir(tmp_path, temp_library):
-    """Mock CURRENT_DIR to use temp library."""
-    with patch("z_explorer.globals.CURRENT_DIR", str(tmp_path)):
+    """Mock library directory to use temp library."""
+    with patch.dict(os.environ, {"LOCAL_LIBRARY_DIR": str(temp_library)}):
         yield tmp_path
 
 

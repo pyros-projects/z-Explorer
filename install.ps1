@@ -52,7 +52,13 @@ try {
 
     try {
         $null = Get-Command winget -ErrorAction Stop
+        # Allow stderr for winget
+        $ErrorActionPreference = "Continue"
         winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+        $ErrorActionPreference = "Stop"
+        if ($LASTEXITCODE -ne 0) {
+            throw "winget failed"
+        }
 
         # Refresh PATH
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
@@ -96,20 +102,40 @@ try {
 $InstallDir = if ($env:Z_EXPLORER_DIR) { $env:Z_EXPLORER_DIR } else { "$(Get-Location)\z-Explorer" }
 
 # Clone or update repository
+# Temporarily allow stderr (git writes progress there)
+$ErrorActionPreference = "Continue"
 if (Test-Path $InstallDir) {
     Write-Host "📁 Directory $InstallDir already exists" -ForegroundColor Cyan
     Write-Host "   Pulling latest changes..." -ForegroundColor Cyan
     Push-Location $InstallDir
     git pull
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Git pull failed" -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
 } else {
     Write-Host "📥 Cloning Z-Explorer to $InstallDir..." -ForegroundColor Cyan
     git clone https://github.com/pyros-projects/z-Explorer.git $InstallDir
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Git clone failed" -ForegroundColor Red
+        exit 1
+    }
     Push-Location $InstallDir
 }
+$ErrorActionPreference = "Stop"
 
 # Install dependencies
 Write-Host "📦 Installing dependencies (this may take a few minutes)..." -ForegroundColor Cyan
+# Temporarily allow stderr (uv writes info there)
+$ErrorActionPreference = "Continue"
 uv sync
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ uv sync failed" -ForegroundColor Red
+    Pop-Location
+    exit 1
+}
+$ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "✅ Installation complete!" -ForegroundColor Green
@@ -123,6 +149,8 @@ Write-Host ""
 Write-Host ""
 Write-Host "🚀 Launching Z-Explorer on $HostParam (models will download automatically)..." -ForegroundColor Cyan
 Write-Host ""
+# Allow stderr for uv run (writes info there)
+$ErrorActionPreference = "Continue"
 uv run z-explorer --quick-setup --host $HostParam
 
 Pop-Location
