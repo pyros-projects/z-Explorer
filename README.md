@@ -62,7 +62,7 @@ Click **"Download"** when prompted. Grab a coffee while ~10GB of models download
 
 Once complete — you're ready to create!
 
-> **Requirements:** Linux or Windows, NVIDIA GPU with 12GB+ VRAM (8GB+ should be fine too), [uv](https://docs.astral.sh/uv/) package manager.
+> **Requirements:** Linux or Windows, NVIDIA GPU with 10GB+ VRAM (8GB+ is probably fine too), [uv](https://docs.astral.sh/uv/) package manager, and **[Node.js](https://nodejs.org/)**.
 > See [Installation](#installation) for Docker, manual setup, and advanced options.
 
 ---
