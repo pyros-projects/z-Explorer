@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Z-Explorer - Info Overlay Mockup</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a0f;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .mockup-container {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .mockup {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mockup-label {
+      font-size: 13px;
+      color: #a855f7;
+      font-weight: 600;
+    }
+
+    /* Lightbox simulation */
+    .lightbox {
+      position: relative;
+      background: rgba(0, 0, 0, 0.95);
+      border-radius: 12px;
+      padding: 20px;
+      width: 500px;
+      height: 500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .image-container {
+      position: relative;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .preview-image {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Info button - corner overlay */
+    .info-btn {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      width: 40px;
+      height: 40px;
+      background: rgba(10, 10, 20, 0.8);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(8px);
+      font-size: 18px;
+      color: #a855f7;
+    }
+
+    .info-btn:hover {
+      background: rgba(139, 92, 246, 0.3);
+      border-color: #a855f7;
+      transform: scale(1.1);
+    }
+
+    /* Info panel - slides in from right */
+    .info-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 320px;
+      background: linear-gradient(135deg, rgba(10, 10, 20, 0.95) 0%, rgba(15, 15, 25, 0.95) 100%);
+      border-left: 1px solid rgba(139, 92, 246, 0.3);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      backdrop-filter: blur(12px);
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #22d3ee;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .close-panel {
+      width: 28px;
+      height: 28px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      color: #94a3b8;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .close-panel:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.4);
+      color: white;
+    }
+
+    .info-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #22c55e;
+    }
+
+    .info-value {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    .info-value.prompt {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 6px;
+      border-left: 3px solid #a855f7;
+    }
+
+    /* Metadata grid */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .meta-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+
+    .meta-item .info-label {
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .meta-item .info-value {
+      font-size: 14px;
+      color: #f1f5f9;
+    }
+
+    /* Actions */
+    .panel-actions {
+      margin-top: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 10px;
+      background: rgba(139, 92, 246, 0.2);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 6px;
+      color: #a855f7;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: rgba(139, 92, 246, 0.3);
+      border-color: #a855f7;
+    }
+
+    /* Comparison section */
+    .comparison {
+      margin-top: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .comparison h2 {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .comparison-row {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .note {
+      max-width: 600px;
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.8;
+      margin-top: 40px;
+    }
+
+    .note strong {
+      color: #22d3ee;
+    }
+  </style>
+</head>
+<body>
+  <h1>Option 3: Info Icon Overlay — Mockup</h1>
+
+  <div class="mockup-container">
+    <!-- Default state: Image with info button -->
+    <div class="mockup">
+      <div class="mockup-label">Default State — ⓘ button in corner</div>
+      <div class="lightbox">
+        <div class="image-container">
+          <img src="https://placecats.com/millie/400/400" alt="Cat" class="preview-image">
+          <button class="info-btn" title="Show info">ⓘ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel open state -->
+    <div class="mockup">
+      <div class="mockup-label">Panel Open — Click ⓘ reveals metadata</div>
+      <div class="lightbox">
+        <div class="image-container" style="margin-right: 160px;">
+          <img src="https://placecats.com/millie/320/320" alt="Cat" class="preview-image">
+        </div>
+
+        <div class="info-panel">
+          <div class="panel-header">
+            <span class="panel-title">Image Info</span>
+            <button class="close-panel">×</button>
+          </div>
+
+          <div class="info-section">
+            <span class="info-label">📜 Prompt</span>
+            <div class="info-value prompt">A cute cat in a vibrant 2D digital artwork style, rendered in the distinctive, expressive aesthetic of SamDoesArt — soft pastel colors, gentle lighting with a warm glow</div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="info-label">📐 Size</div>
+              <div class="info-value">1024×1024</div>
+            </div>
+            <div class="meta-item">
+              <div class="info-label">🎲 Seed</div>
+              <div class="info-value">543769263</div>
+            </div>
+            <div class="meta-item">
+              <div class="info-label">📅 Created</div>
+              <div class="info-value">Dec 2, 09:13</div>
+            </div>
+            <div class="meta-item">
+              <div class="info-label">💾 File</div>
+              <div class="info-value">1.2 MB</div>
+            </div>
+          </div>
+
+          <div class="panel-actions">
+            <button class="action-btn">📋 Copy Prompt</button>
+            <button class="action-btn">🔄 Regenerate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="comparison">
+    <h2>Key Benefits</h2>
+
+    <div class="note">
+      <p>
+        <strong>🖼️ Image gets 100% of the space by default.</strong><br>
+        The prompt and metadata are one click away, but don't steal attention from the art.
+      </p>
+      <br>
+      <p>
+        <strong>📊 Extensible for any metadata.</strong><br>
+        Size, seed, date, file size, model used, enhancement details — all can live in the panel.
+        Add more fields without cluttering the view.
+      </p>
+      <br>
+      <p>
+        <strong>⚡ Quick actions where you need them.</strong><br>
+        Copy prompt, regenerate with same seed, delete — actions appear in context.
+      </p>
+    </div>
+  </div>
+
+</body>
+</html>
