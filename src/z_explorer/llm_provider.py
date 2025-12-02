@@ -14,6 +14,7 @@ Set LLM_MODE and LLM_PATH/LLM_REPO environment variables to configure.
 
 Supports any HuggingFace-compatible model including:
 - Qwen (default)
+- Ministral 3B (Aratako/Ministral-3-3B-Instruct-2512-TextOnly)
 - BNB 4-bit quantized models (e.g., unsloth/Qwen3-4B-Instruct-2507-bnb-4bit)
 - GGUF quantized models
 - Any other transformers-compatible LLM
@@ -28,49 +29,26 @@ console = Console(stderr=True)
 # Lazy imports to avoid loading heavy libraries unless needed
 _model = None
 _tokenizer = None
-_is_mistral = False  # Track if we loaded a Mistral multimodal model
 _is_ministral_fp8 = False  # Track if we loaded a Ministral FP8 text-only model
 
 
-def _is_mistral_model(model_name: str) -> bool:
-    """Check if the model name indicates a Mistral model (multimodal, needs special classes)."""
-    name_lower = model_name.lower()
-    # Only official mistralai multimodal models need special handling
-    # Text-only variants (like Aratako's) work with Auto classes
-    return "mistralai" in name_lower and "textonly" not in name_lower.replace(
-        "-", ""
-    ).replace("_", "")
-
-
 def _is_ministral_fp8_model(model_name: str) -> bool:
-    """Check if the model is a Ministral FP8 model that needs dequantization."""
+    """Check if the model is a Ministral FP8 model that needs dequantization.
+
+    Matches models like:
+    - Aratako/Ministral-3-3B-Instruct-2512-TextOnly
+    - Any model with 'ministral' in the name
+    """
     name_lower = model_name.lower()
     return "ministral" in name_lower
 
 
-def _load_mistral_model(repo: str):
-    """Load a Mistral multimodal model with its special classes."""
-    from transformers import (
-        FineGrainedFP8Config,
-        Mistral3ForConditionalGeneration,
-        MistralCommonBackend,
-    )
-
-    console.print(f"[cyan]Loading Mistral model: {repo}[/cyan]")
-
-    tokenizer = MistralCommonBackend.from_pretrained(repo)
-    # Mistral models are stored in FP8 format, dequantize to bfloat16 on load
-    model = Mistral3ForConditionalGeneration.from_pretrained(
-        repo,
-        device_map="auto",
-        quantization_config=FineGrainedFP8Config(dequantize=True),
-    )
-
-    return model, tokenizer
-
-
 def _load_ministral_fp8_model(repo: str):
-    """Load a Ministral text-only FP8 model with Auto classes."""
+    """Load a Ministral text-only FP8 model with Auto classes.
+
+    Ministral models are stored in FP8 format and need to be dequantized
+    to bfloat16 on load using FineGrainedFP8Config.
+    """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, FineGrainedFP8Config
 
@@ -94,7 +72,7 @@ def _load_model():
     Uses configuration from get_llm_config() which is independent
     from the image model configuration.
     """
-    global _model, _tokenizer, _is_mistral, _is_ministral_fp8
+    global _model, _tokenizer, _is_ministral_fp8
 
     if _model is not None:
         return _model, _tokenizer
@@ -111,7 +89,7 @@ def _load_model():
 
     try:
         import torch
-        from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoModelForCausalLM, AutoTokenizer
     except ImportError:
         raise ImportError(
             "Local mode requires transformers and torch. Install with: uv sync"
@@ -145,12 +123,8 @@ def _load_model():
 
     elif config.mode == LLMMode.HF_DOWNLOAD:
         # Download from HuggingFace Hub (supports BNB quantized models!)
-        if _is_mistral_model(config.hf_repo):
-            # Use special Mistral multimodal loading
-            _is_mistral = True
-            _model, _tokenizer = _load_mistral_model(config.hf_repo)
-        elif _is_ministral_fp8_model(config.hf_repo):
-            # Use Ministral FP8 loading (text-only, Auto classes)
+        if _is_ministral_fp8_model(config.hf_repo):
+            # Use Ministral FP8 loading (text-only, Auto classes with dequantization)
             _is_ministral_fp8 = True
             _model, _tokenizer = _load_ministral_fp8_model(config.hf_repo)
         else:
@@ -171,12 +145,8 @@ def _load_model():
 
     elif config.mode == LLMMode.HF_LOCAL:
         # Load from local path
-        if _is_mistral_model(config.hf_local_path):
-            # Use special Mistral multimodal loading
-            _is_mistral = True
-            _model, _tokenizer = _load_mistral_model(config.hf_local_path)
-        elif _is_ministral_fp8_model(config.hf_local_path):
-            # Use Ministral FP8 loading (text-only, Auto classes)
+        if _is_ministral_fp8_model(config.hf_local_path):
+            # Use Ministral FP8 loading (text-only, Auto classes with dequantization)
             _is_ministral_fp8 = True
             _model, _tokenizer = _load_ministral_fp8_model(config.hf_local_path)
         else:
@@ -355,39 +325,7 @@ def generate_text(
 
     messages = [{"role": "user", "content": prompt}]
 
-    if _is_mistral:
-        # Mistral uses a different inference pattern
-        tokenized = tokenizer.apply_chat_template(
-            messages, return_tensors="pt", return_dict=True
-        )
-        # Move ALL tensors to CUDA
-        input_len = tokenized["input_ids"].shape[1]
-        tokenized = {
-            k: v.to("cuda") if isinstance(v, torch.Tensor) else v
-            for k, v in tokenized.items()
-        }
-
-        # Handle pixel_values if present (for multimodal)
-        if "pixel_values" in tokenized:
-            tokenized["pixel_values"] = tokenized["pixel_values"].to(
-                dtype=torch.bfloat16
-            )
-            image_sizes = [tokenized["pixel_values"].shape[-2:]]
-            output = model.generate(
-                **tokenized,
-                image_sizes=image_sizes,
-                max_new_tokens=max_tokens,
-            )[0]
-        else:
-            output = model.generate(
-                **tokenized,
-                max_new_tokens=max_tokens,
-            )[0]
-
-        response = tokenizer.decode(output[input_len:], skip_special_tokens=True)
-        return response.strip()
-
-    # Standard model inference (Qwen, etc.)
+    # Standard model inference (Qwen, Ministral, etc.)
     text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
@@ -449,12 +387,7 @@ def _generate_with_outlines(prompt: str, count: int) -> list[str] | None:
 
     Returns None if outlines is not available or fails.
     """
-    # Outlines doesn't support Mistral's special classes
-    if _is_mistral:
-        return None
-
     try:
-        import outlines
         from outlines import generate, models
 
         # Get the already-loaded model and tokenizer
@@ -592,7 +525,7 @@ JSON array:"""
 
 def unload_model():
     """Unload the model to free GPU memory."""
-    global _model, _tokenizer, _is_mistral, _is_ministral_fp8
+    global _model, _tokenizer, _is_ministral_fp8
 
     if _model is not None:
         import gc
@@ -603,7 +536,6 @@ def unload_model():
         del _tokenizer
         _model = None
         _tokenizer = None
-        _is_mistral = False
         _is_ministral_fp8 = False
 
         gc.collect()

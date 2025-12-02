@@ -19,7 +19,6 @@ dependencies = [
     "term-image>=0.7.2",
     "websockets>=15.0.1",
     "torch>=2.0.0",
-    "transformers @ git+https://github.com/huggingface/transformers",
     "accelerate>=0.30.0",
     "huggingface-hub>=0.23.0",
     "sentencepiece>=0.2.0",
@@ -33,6 +32,7 @@ dependencies = [
     # Git dependencies - these require `uv sync` (not pip/uvx)
     "sdnq @ git+https://github.com/Disty0/sdnq",
     "diffusers @ git+https://github.com/huggingface/diffusers",
+    "transformers @ git+https://github.com/huggingface/transformers",
     "mistral-common>=1.8.6",
 ]
 

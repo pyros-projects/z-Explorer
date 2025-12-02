@@ -12,14 +12,13 @@ This guide explains how to add support for the Ministral-3B TextOnly model to th
 | **VRAM** | ~8-10GB (after dequantization to bfloat16) |
 | **Speed** | Fast inference, comparable to Qwen3-4B |
 
-### Why TextOnly over Multimodal?
+### Why TextOnly?
 
-The original `mistralai/Ministral-3-3B-Instruct-2512` requires special classes (`Mistral3ForConditionalGeneration`, `MistralCommonBackend`) that aren't available in standard transformers. The TextOnly variant:
+The TextOnly variant uses standard `AutoTokenizer` and `AutoModelForCausalLM`, making it:
 
-- Uses standard `AutoTokenizer` and `AutoModelForCausalLM`
-- Has no vision encoder (which we don't need anyway)
-- Lower VRAM footprint
-- Better compatibility and future-proof
+- **Compatible** - Works with standard transformers classes
+- **Lightweight** - No vision encoder (which we don't need anyway)
+- **Future-proof** - No special handling needed as transformers evolves
 
 ## Dependencies
 
@@ -39,32 +38,37 @@ The git version of transformers is required for:
 
 ## Code Changes
 
-### 1. Add Model Detection Function
+All changes are in `src/z_explorer/llm_provider.py`:
 
-In `llm_provider.py`, add this function after the imports:
-
-```python
-def _is_ministral_fp8_model(model_name: str) -> bool:
-    """Check if the model is a Ministral FP8 model that needs dequantization."""
-    name_lower = model_name.lower()
-    return "ministral" in name_lower
-```
-
-### 2. Add Global Flag
-
-Add this with the other global variables:
+### 1. Add Global Flag
 
 ```python
 _is_ministral_fp8 = False  # Track if we loaded a Ministral FP8 text-only model
 ```
 
-### 3. Add Model Loader Function
+### 2. Add Model Detection Function
 
-Add this new loader function:
+```python
+def _is_ministral_fp8_model(model_name: str) -> bool:
+    """Check if the model is a Ministral FP8 model that needs dequantization.
+
+    Matches models like:
+    - Aratako/Ministral-3-3B-Instruct-2512-TextOnly
+    - Any model with 'ministral' in the name
+    """
+    name_lower = model_name.lower()
+    return "ministral" in name_lower
+```
+
+### 3. Add Model Loader Function
 
 ```python
 def _load_ministral_fp8_model(repo: str):
-    """Load a Ministral text-only FP8 model with Auto classes."""
+    """Load a Ministral text-only FP8 model with Auto classes.
+
+    Ministral models are stored in FP8 format and need to be dequantized
+    to bfloat16 on load using FineGrainedFP8Config.
+    """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, FineGrainedFP8Config
 
@@ -83,7 +87,7 @@ def _load_ministral_fp8_model(repo: str):
 ```
 
 Key points:
-- `FineGrainedFP8Config(dequantize=True)` is **required** - the model is stored in FP8 format and must be dequantized
+- `FineGrainedFP8Config(dequantize=True)` is **required** - the model is stored in FP8 format
 - `torch_dtype=torch.bfloat16` ensures proper dtype after dequantization
 - `trust_remote_code=True` is needed for the model's custom code
 
@@ -100,25 +104,18 @@ elif config.mode == LLMMode.HF_DOWNLOAD:
         # ... existing code for other models ...
 ```
 
-Similarly for `HF_LOCAL` mode if needed.
+Similarly for `HF_LOCAL` mode.
 
 ### 5. Update `generate_text()` Function
 
 Ministral models don't accept `token_type_ids`. Add this after creating the inputs:
 
 ```python
-# Standard model inference (Qwen, etc.)
-text = tokenizer.apply_chat_template(
-    messages, tokenize=False, add_generation_prompt=True
-)
 inputs = tokenizer(text, return_tensors="pt").to(model.device)
 
-# ADD THIS: Remove token_type_ids if present (Ministral FP8 models don't accept it)
+# Remove token_type_ids if present (Ministral FP8 models don't accept it)
 if _is_ministral_fp8 and "token_type_ids" in inputs:
     del inputs["token_type_ids"]
-
-with torch.no_grad():
-    # ... rest of generation code ...
 ```
 
 ### 6. Update `unload_model()` Function
@@ -127,11 +124,9 @@ Reset the flag when unloading:
 
 ```python
 def unload_model():
-    global _model, _tokenizer, _is_ministral_fp8  # Add _is_ministral_fp8
-    
-    if _model is not None:
-        # ... existing cleanup code ...
-        _is_ministral_fp8 = False  # Add this line
+    global _model, _tokenizer, _is_ministral_fp8
+    # ... existing cleanup ...
+    _is_ministral_fp8 = False
 ```
 
 ## Configuration
@@ -168,35 +163,14 @@ Expected results:
 - Detailed scenes are longer and more evocative
 - Simple variables (cat breeds, colors) are comparable
 
-## Prompt Engineering Notes
-
-The improved prompt format with examples helps Ministral return proper JSON arrays:
-
-```python
-prompt = f"""Generate exactly {count} values for: "{readable_name}"
-
-...
-
-The variable name tells you what to generate. Examples:
-- "cat breed" → ["Scottish Fold", "Persian", "Maine Coon"]
-- "detailed scene" → ["A moonlit forest...", "A bustling Tokyo alley...", "An abandoned lighthouse..."]
-- "color" → ["crimson", "midnight blue", "emerald green"]
-
-Return ONLY a JSON array of {count} strings. No objects, no nested structures, just plain strings in an array.
-
-JSON array:"""
-```
-
-This prevents Ministral from returning nested JSON objects.
-
 ## Checklist
 
 - [ ] Update `pyproject.toml` with transformers git dependency
 - [ ] Add `mistral-common>=1.8.6` dependency
-- [ ] Add `_is_ministral_fp8_model()` detection function
 - [ ] Add `_is_ministral_fp8` global flag
+- [ ] Add `_is_ministral_fp8_model()` detection function
 - [ ] Add `_load_ministral_fp8_model()` loader function
-- [ ] Update `_load_model()` to use Ministral loader
+- [ ] Update `_load_model()` to use Ministral loader (HF_DOWNLOAD + HF_LOCAL)
 - [ ] Update `generate_text()` to remove `token_type_ids`
 - [ ] Update `unload_model()` to reset flag
 - [ ] Run `uv sync` to update dependencies
@@ -206,16 +180,29 @@ This prevents Ministral from returning nested JSON objects.
 
 ### Error: "block_size is None"
 
-The model is FP8 quantized and needs dequantization. Ensure you're using `FineGrainedFP8Config(dequantize=True)`.
+The model is FP8 quantized and needs dequantization. Ensure you're using:
+```python
+quantization_config=FineGrainedFP8Config(dequantize=True)
+```
 
 ### Error: "token_type_ids"
 
 Ministral doesn't accept this parameter. Ensure the `_is_ministral_fp8` check removes it from inputs.
 
-### Error: "No valid tokenizer file found"
-
-Make sure you're using `AutoTokenizer`, not `MistralCommonBackend` (that's for multimodal only).
-
 ### Stray JSON markers in output
 
-If you see ` ```json ``` ` in outputs, the prompt may need adjustment. The examples in the prompt help prevent this.
+If you see ` ```json ``` ` in outputs, the prompt examples help prevent this. The current prompt format with concrete examples produces clean JSON output.
+
+## Output Quality
+
+Ministral TextOnly produces rich, creative output:
+
+| Variable Type | Qwen3-4B | Ministral TextOnly |
+|--------------|----------|-------------------|
+| Simple (cat_breed) | Good | Equally good |
+| Art styles | 2 words avg | 7-9 words, more descriptive |
+| Detailed scenes | 15-19 words | 51-65 words, richer |
+| Fantasy landscapes | 31-37 words | 32-47 words |
+| Very detailed 50w+ | 97-119 words | 124-127 words |
+
+Both models produce quality output suitable for image generation prompts.
