@@ -100,10 +100,22 @@ if (Test-Path $InstallDir) {
     Write-Host "📁 Directory $InstallDir already exists" -ForegroundColor Cyan
     Write-Host "   Pulling latest changes..." -ForegroundColor Cyan
     Push-Location $InstallDir
-    git pull
+    # Git writes progress to stderr, which PowerShell treats as error - redirect to suppress
+    $pullOutput = git pull 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Git pull failed: $pullOutput" -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
+    Write-Host "   $pullOutput" -ForegroundColor Gray
 } else {
     Write-Host "📥 Cloning Z-Explorer to $InstallDir..." -ForegroundColor Cyan
-    git clone https://github.com/pyros-projects/z-Explorer.git $InstallDir
+    # Git writes progress to stderr, which PowerShell treats as error - redirect to suppress
+    $cloneOutput = git clone https://github.com/pyros-projects/z-Explorer.git $InstallDir 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Git clone failed: $cloneOutput" -ForegroundColor Red
+        exit 1
+    }
     Push-Location $InstallDir
 }
 
