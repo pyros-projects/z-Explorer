@@ -372,6 +372,7 @@ Your task is to enhance the user's prompt to create images that best match their
 - If they want chaos and disorder → enhance for dynamic, unpredictable compositions
 
 Rules:
+- PRESERVE all factual details from the original prompt (age, nationality, occupation, counts, etc.)
 - Add specific details about lighting, atmosphere, style, and composition
 - AMPLIFY the core intent of the original prompt, don't fight against it
 - If no style is specified, default to professional image generation aesthetics
