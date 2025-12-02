@@ -14,9 +14,8 @@ __pycache__
 .idea
 .cursor
 
-# Build artifacts (but NOT gui dist - that's pre-built!)
+# Build artifacts
 dist/
-!src/z_explorer/gui/dist/
 *.egg-info
 .pytest_cache
 .coverage
@@ -32,5 +31,6 @@ docs/
 *.md
 !README.md
 
-# Node modules (GUI is pre-built)
+# Node - exclude node_modules and dist (will be built in Docker)
 src/z_explorer/gui/node_modules
+src/z_explorer/gui/dist
