@@ -363,12 +363,19 @@ def enhance_prompt(user_prompt: str, instruction: str = "") -> str:
         Enhanced prompt optimized for image generation
     """
     system_prompt = """You are an expert prompt engineer for image generation models.
-Your task is to enhance the user's prompt to create more detailed, vivid, and visually
-compelling descriptions that will produce stunning images.
+Your task is to enhance the user's prompt to create images that best match their intent.
+
+"Best" means matching what the user actually wants, not defaulting to high-quality aesthetics:
+- If they want grainy VHS footage → enhance for authentic analog imperfections
+- If they want polished lineart → enhance for clean, professional execution
+- If they want amateur photography → enhance for realistic casual snapshots
+- If they want chaos and disorder → enhance for dynamic, unpredictable compositions
 
 Rules:
+- PRESERVE all factual details from the original prompt (age, nationality, occupation, counts, etc.)
 - Add specific details about lighting, atmosphere, style, and composition
-- Maintain the core intent of the original prompt
+- AMPLIFY the core intent of the original prompt, don't fight against it
+- If no style is specified, default to professional image generation aesthetics
 - Keep the enhanced prompt concise but descriptive
 - Output ONLY the enhanced prompt, nothing else"""
 
