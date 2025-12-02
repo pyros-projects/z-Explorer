@@ -63,6 +63,7 @@ Click **"Download"** when prompted. Grab a coffee while ~10GB of models download
 Once complete — you're ready to create!
 
 > **Requirements:** Linux or Windows, NVIDIA GPU (GTX 1080 Ti or newer) with 10GB+ VRAM, [uv](https://docs.astral.sh/uv/) package manager, **[Node.js](https://nodejs.org/)**, and Unicode support in terminal (like Windows Terminal or almost any Linux terminal).
+> **Note:** The installer creates a `z-Explorer` folder in your current directory. Run it from where you want to install!
 > See [Installation](#installation) for Docker, manual setup, and advanced options.
 
 ---
