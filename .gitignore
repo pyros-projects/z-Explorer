@@ -2,8 +2,6 @@
 __pycache__/
 *.py[oc]
 build/
-dist/
-!src/z_explorer/gui/dist/
 wheels/
 *.egg-info
 output/
