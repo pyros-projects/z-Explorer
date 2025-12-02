@@ -14,6 +14,7 @@ Set LLM_MODE and LLM_PATH/LLM_REPO environment variables to configure.
 
 Supports any HuggingFace-compatible model including:
 - Qwen (default)
+- Ministral 3B (Aratako/Ministral-3-3B-Instruct-2512-TextOnly)
 - BNB 4-bit quantized models (e.g., unsloth/Qwen3-4B-Instruct-2507-bnb-4bit)
 - GGUF quantized models
 - Any other transformers-compatible LLM
@@ -28,6 +29,41 @@ console = Console(stderr=True)
 # Lazy imports to avoid loading heavy libraries unless needed
 _model = None
 _tokenizer = None
+_is_ministral_fp8 = False  # Track if we loaded a Ministral FP8 text-only model
+
+
+def _is_ministral_fp8_model(model_name: str) -> bool:
+    """Check if the model is a Ministral FP8 model that needs dequantization.
+
+    Matches models like:
+    - Aratako/Ministral-3-3B-Instruct-2512-TextOnly
+    - Any model with 'ministral' in the name
+    """
+    name_lower = model_name.lower()
+    return "ministral" in name_lower
+
+
+def _load_ministral_fp8_model(repo: str):
+    """Load a Ministral text-only FP8 model with Auto classes.
+
+    Ministral models are stored in FP8 format and need to be dequantized
+    to bfloat16 on load using FineGrainedFP8Config.
+    """
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer, FineGrainedFP8Config
+
+    console.print(f"[cyan]Loading Ministral FP8 model: {repo}[/cyan]")
+
+    tokenizer = AutoTokenizer.from_pretrained(repo, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        repo,
+        device_map="auto",
+        torch_dtype=torch.bfloat16,
+        quantization_config=FineGrainedFP8Config(dequantize=True),
+        trust_remote_code=True,
+    )
+
+    return model, tokenizer
 
 
 def _load_model():
@@ -36,7 +72,7 @@ def _load_model():
     Uses configuration from get_llm_config() which is independent
     from the image model configuration.
     """
-    global _model, _tokenizer
+    global _model, _tokenizer, _is_ministral_fp8
 
     if _model is not None:
         return _model, _tokenizer
@@ -53,7 +89,7 @@ def _load_model():
 
     try:
         import torch
-        from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoModelForCausalLM, AutoTokenizer
     except ImportError:
         raise ImportError(
             "Local mode requires transformers and torch. Install with: uv sync"
@@ -87,35 +123,47 @@ def _load_model():
 
     elif config.mode == LLMMode.HF_DOWNLOAD:
         # Download from HuggingFace Hub (supports BNB quantized models!)
-        console.print(f"[cyan]Loading LLM from HuggingFace: {config.hf_repo}[/cyan]")
+        if _is_ministral_fp8_model(config.hf_repo):
+            # Use Ministral FP8 loading (text-only, Auto classes with dequantization)
+            _is_ministral_fp8 = True
+            _model, _tokenizer = _load_ministral_fp8_model(config.hf_repo)
+        else:
+            console.print(
+                f"[cyan]Loading LLM from HuggingFace: {config.hf_repo}[/cyan]"
+            )
 
-        _tokenizer = AutoTokenizer.from_pretrained(
-            config.hf_repo,
-            trust_remote_code=True,
-        )
-        _model = AutoModelForCausalLM.from_pretrained(
-            config.hf_repo,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
-            trust_remote_code=True,
-        )
+            _tokenizer = AutoTokenizer.from_pretrained(
+                config.hf_repo,
+                trust_remote_code=True,
+            )
+            _model = AutoModelForCausalLM.from_pretrained(
+                config.hf_repo,
+                torch_dtype=torch.bfloat16,
+                device_map="auto",
+                trust_remote_code=True,
+            )
 
     elif config.mode == LLMMode.HF_LOCAL:
         # Load from local path
-        console.print(
-            f"[cyan]Loading LLM from local path: {config.hf_local_path}[/cyan]"
-        )
+        if _is_ministral_fp8_model(config.hf_local_path):
+            # Use Ministral FP8 loading (text-only, Auto classes with dequantization)
+            _is_ministral_fp8 = True
+            _model, _tokenizer = _load_ministral_fp8_model(config.hf_local_path)
+        else:
+            console.print(
+                f"[cyan]Loading LLM from local path: {config.hf_local_path}[/cyan]"
+            )
 
-        _tokenizer = AutoTokenizer.from_pretrained(
-            config.hf_local_path,
-            trust_remote_code=True,
-        )
-        _model = AutoModelForCausalLM.from_pretrained(
-            config.hf_local_path,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
-            trust_remote_code=True,
-        )
+            _tokenizer = AutoTokenizer.from_pretrained(
+                config.hf_local_path,
+                trust_remote_code=True,
+            )
+            _model = AutoModelForCausalLM.from_pretrained(
+                config.hf_local_path,
+                torch_dtype=torch.bfloat16,
+                device_map="auto",
+                trust_remote_code=True,
+            )
 
     elif config.mode == LLMMode.GGUF:
         # Load from GGUF file
@@ -276,10 +324,16 @@ def generate_text(
     model, tokenizer = _load_model()
 
     messages = [{"role": "user", "content": prompt}]
+
+    # Standard model inference (Qwen, Ministral, etc.)
     text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
     inputs = tokenizer(text, return_tensors="pt").to(model.device)
+
+    # Remove token_type_ids if present (Ministral FP8 models don't accept it)
+    if _is_ministral_fp8 and "token_type_ids" in inputs:
+        del inputs["token_type_ids"]
 
     with torch.no_grad():
         outputs = model.generate(
@@ -334,7 +388,6 @@ def _generate_with_outlines(prompt: str, count: int) -> list[str] | None:
     Returns None if outlines is not available or fails.
     """
     try:
-        import outlines
         from outlines import generate, models
 
         # Get the already-loaded model and tokenizer
@@ -404,14 +457,14 @@ def generate_prompt_variable_values(
 
 Context: This will be substituted into the prompt "{context_prompt}"
 
-The variable name tells you what to generate:
-- "cat breed" → simple breed names
-- "detailed scene with dramatic lighting" → full detailed scene descriptions
-- "50 word fantasy landscape" → ~50 word landscape descriptions
+The variable name tells you what to generate. Examples:
+- "cat breed" → ["Scottish Fold", "Persian", "Maine Coon"]
+- "detailed scene" → ["A moonlit forest with ancient oaks and a winding stream reflecting stars", "A bustling Tokyo alley at night with neon signs and rain-slicked pavement", "An abandoned lighthouse on a cliff during a violent storm"]
+- "color" → ["crimson", "midnight blue", "emerald green"]
 
 Interpret "{readable_name}" literally. Generate what it asks for.
 
-Return ONLY a JSON array of {count} strings. Nothing else.
+Return ONLY a JSON array of {count} strings. No objects, no nested structures, just plain strings in an array.
 
 JSON array:"""
 
@@ -431,7 +484,23 @@ JSON array:"""
             json_str = response[start:end]
             values = json.loads(json_str)
             if isinstance(values, list) and values:
-                return values[: count + 10]
+                # Ensure all values are strings (some models return dicts)
+                string_values = []
+                for v in values:
+                    if isinstance(v, str):
+                        string_values.append(v)
+                    elif isinstance(v, dict):
+                        # Extract the longest string value from dict
+                        # (models sometimes return {"time": "x", "location": "long description"})
+                        str_vals = [val for val in v.values() if isinstance(val, str)]
+                        if str_vals:
+                            # Pick the longest one - usually the actual content
+                            string_values.append(max(str_vals, key=len))
+                        else:
+                            string_values.append(str(v))
+                    else:
+                        string_values.append(str(v))
+                return string_values[: count + 10]
     except json.JSONDecodeError:
         pass
 
@@ -456,7 +525,7 @@ JSON array:"""
 
 def unload_model():
     """Unload the model to free GPU memory."""
-    global _model, _tokenizer
+    global _model, _tokenizer, _is_ministral_fp8
 
     if _model is not None:
         import gc
@@ -467,6 +536,7 @@ def unload_model():
         del _tokenizer
         _model = None
         _tokenizer = None
+        _is_ministral_fp8 = False
 
         gc.collect()
         if torch.cuda.is_available():

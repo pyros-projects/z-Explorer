@@ -1,8 +1,7 @@
 import os
 from typing import Optional
-from pydantic import BaseModel
 
-from z_explorer.globals import CURRENT_DIR
+from pydantic import BaseModel
 
 
 class PromptVars(BaseModel):
@@ -13,8 +12,11 @@ class PromptVars(BaseModel):
 
 
 def get_prompt_vars_dir() -> str:
-    """Get the absolute path to the prompt_vars directory."""
-    return os.path.abspath(os.path.join(CURRENT_DIR, "library/"))
+    """Get the absolute path to the library directory.
+
+    Uses LOCAL_LIBRARY_DIR env var or defaults to ./library in current working directory.
+    """
+    return os.path.abspath(os.getenv("LOCAL_LIBRARY_DIR", "./library"))
 
 
 def save_prompt_var(variable_name: str, description: str, values: list[str]) -> str:
@@ -53,8 +55,8 @@ def save_prompt_var(variable_name: str, description: str, values: list[str]) -> 
 def load_prompt_vars() -> dict[str, PromptVars]:
     """Load prompt variables from the library/ directory"""
 
-    # Get the absolute path to the prompt_vars directory
-    prompt_vars_dir = os.path.abspath(os.path.join(CURRENT_DIR, "library/"))
+    # Get the absolute path to the library directory
+    prompt_vars_dir = get_prompt_vars_dir()
 
     prompt_vars = {}
     if not os.path.exists(prompt_vars_dir):
