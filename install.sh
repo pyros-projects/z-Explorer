@@ -48,6 +48,38 @@ if ! command -v nvidia-smi &> /dev/null; then
     echo ""
 fi
 
+# Check for Node.js
+if ! command -v node &> /dev/null; then
+    echo "📦 Installing Node.js 20.x..."
+
+    # Detect package manager and install
+    if command -v apt-get &> /dev/null; then
+        # Debian/Ubuntu
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    elif command -v dnf &> /dev/null; then
+        # Fedora/RHEL
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+        sudo dnf install -y nodejs
+    elif command -v pacman &> /dev/null; then
+        # Arch
+        sudo pacman -S --noconfirm nodejs npm
+    else
+        echo "❌ Could not detect package manager. Please install Node.js manually:"
+        echo "   https://nodejs.org/"
+        exit 1
+    fi
+
+    if command -v node &> /dev/null; then
+        echo "✓ Node.js $(node --version) installed"
+    else
+        echo "❌ Failed to install Node.js. Please install manually: https://nodejs.org/"
+        exit 1
+    fi
+else
+    echo "✓ Node.js $(node --version) already installed"
+fi
+
 # Check for uv
 if ! command -v uv &> /dev/null; then
     echo "📦 Installing uv (fast Python package manager)..."

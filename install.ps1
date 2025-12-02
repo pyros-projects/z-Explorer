@@ -42,6 +42,31 @@ try {
     exit 1
 }
 
+# Check for Node.js
+try {
+    $null = Get-Command node -ErrorAction Stop
+    $nodeVersion = node --version
+    Write-Host "✓ Node.js $nodeVersion already installed" -ForegroundColor Green
+} catch {
+    Write-Host "📦 Installing Node.js via winget..." -ForegroundColor Cyan
+
+    try {
+        $null = Get-Command winget -ErrorAction Stop
+        winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+
+        # Refresh PATH
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+        # Verify installation
+        $null = Get-Command node -ErrorAction Stop
+        $nodeVersion = node --version
+        Write-Host "✓ Node.js $nodeVersion installed" -ForegroundColor Green
+    } catch {
+        Write-Host "❌ Failed to install Node.js. Please install manually: https://nodejs.org/" -ForegroundColor Red
+        exit 1
+    }
+}
+
 # Check for uv
 $uvInstalled = $false
 try {

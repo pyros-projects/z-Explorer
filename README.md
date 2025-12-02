@@ -329,11 +329,27 @@ Same power, different vibe. Perfect for SSH sessions or terminal lovers.
 - **Linux or Windows** (macOS not supported — requires NVIDIA CUDA)
 - **NVIDIA GPU** with CUDA support (12GB+ VRAM recommended)
 - **[uv](https://docs.astral.sh/uv/)** — fast Python package manager
+- **[Node.js](https://nodejs.org/)** 18+ — for building the web UI
 
 **Install uv:**
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh   # Linux
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
+```
+
+**Install Node.js:**
+```bash
+# Linux (Ubuntu/Debian)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Linux (Fedora/RHEL)
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo dnf install -y nodejs
+
+# Windows - download installer from https://nodejs.org/
+# Or use winget:
+winget install OpenJS.NodeJS.LTS
 ```
 
 ### Quick Install
