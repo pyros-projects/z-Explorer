@@ -11,13 +11,13 @@
 #   .\install.ps1 -Host 0.0.0.0
 
 param(
-    [string]$Host = $null
+    [string]$BindHost = $null
 )
 
 $ErrorActionPreference = "Stop"
 
 # Determine host (parameter > env var > default)
-$HostParam = if ($Host) { $Host } elseif ($env:Z_EXPLORER_HOST) { $env:Z_EXPLORER_HOST } else { "127.0.0.1" }
+$HostParam = if ($BindHost) { $BindHost } elseif ($env:Z_EXPLORER_HOST) { $env:Z_EXPLORER_HOST } else { "127.0.0.1" }
 
 Write-Host "🔥 Z-Explorer Installer" -ForegroundColor Magenta
 Write-Host "========================" -ForegroundColor Magenta
