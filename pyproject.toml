@@ -34,6 +34,8 @@ dependencies = [
     "diffusers @ git+https://github.com/huggingface/diffusers",
     "transformers @ git+https://github.com/huggingface/transformers",
     "mistral-common>=1.8.6",
+    # Triton for FP8 support - Windows needs a separate package
+    "triton-windows>=3.2.0; sys_platform == 'win32'",
 ]
 
 
