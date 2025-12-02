@@ -139,6 +139,11 @@ No more googling "list of mythical creatures". Just ask, and it appears.
   <img alt="Z-Explorer" src="docs/assets/05_mythical_creature.png" width="800">
 </p>
 
+**Pro tip:** Combine as many variables as you want, and remember: The name of the variable steers its content!
+
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/14_multi_var.png" width="800">
+</p>
 
 ---
 
