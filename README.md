@@ -76,8 +76,6 @@ Once complete, your browser opens to `http://localhost:8345` — you're ready to
 
 ### Step 1: Your First Image
 
-<!-- TODO: Screenshot of typing the prompt -->
-
 Type a prompt. Any prompt. Natural language, just like talking to a person:
 
 ```
@@ -86,7 +84,9 @@ Type a prompt. Any prompt. Natural language, just like talking to a person:
 
 Hit enter. Watch the magic happen.
 
-<!-- TODO: Screenshot of the generated fox image -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/01_cute_fox.png" width="800">
+</p>
 
 That's it. No nodes. No tabs. No sliders. Just your idea, rendered.
 
@@ -102,25 +102,32 @@ Let's make things interesting. **Variables** let you randomize parts of your pro
 >>> a __animal__ in a magical forest
 ```
 
-<!-- TODO: Screenshot showing variable being used -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/02_animal.png" width="800">
+</p>
 
 Each time you run this, Z-Explorer picks a random animal from its library. Run it 5 times, get 5 different creatures.
 
-**Pro tip:** Type `/vars` to see all available variables.
-
-<!-- TODO: Screenshot of /vars output -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/03_animal.png" width="800">
+</p>
 
 ---
 
-### Step 3: Invent Your Own Variables
+### Step 3: More on Variables
 
-Here's where it gets magical. **Use a variable that doesn't exist:**
+You may ask where it knows what variables are available.
+
+Here's where it gets magical. **They get generated on the fly:**
 
 ```
 >>> a cute __mythical_creature__ in a magical forest
 ```
 
-<!-- TODO: Screenshot showing auto-generation message -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/04_mythical_creature.png" width="800">
+</p>
+
 
 Z-Explorer's local LLM generates it on the fly:
 
@@ -133,6 +140,13 @@ Saved to your library forever. Use `__mythical_creature__` anytime.
 
 No more googling "list of mythical creatures". Just ask, and it appears.
 
+**Pro tip:** Type `/vars` to see all available variables.
+
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/05_mythical_creature.png" width="800">
+</p>
+
+
 ---
 
 ### Step 4: Enhance Your Prompts
@@ -144,20 +158,22 @@ What the AI actually needs for stunning results: `A cute fox with fluffy orange 
 The `>` operator bridges that gap:
 
 ```
->>> a cute fox > make it studio ghibli style with magical lighting
+>>> a cute fox > studio ghibli, 2d, anime
 ```
 
-<!-- TODO: Screenshot showing enhanced prompt output -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/06_enhance.png" width="800">
+</p>
+
 
 The local LLM expands your idea into a rich, detailed prompt. Same intent, 10x better output.
 
-**Preview before generating:**
+Think of the `>` operator as magical 'turns into' operator which makes exploring your ideas even more fun!
 
-```
->>> /enhance a robot gardening
-```
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/07_enhance.png" width="800">
+</p>
 
-See exactly what the AI will generate before committing.
 
 ---
 
@@ -169,7 +185,9 @@ Found a prompt you like? Generate multiple variations at once:
 >>> a __mythical_creature__ in a magical forest : x5
 ```
 
-<!-- TODO: Screenshot showing 5 images being generated -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/08_multi.png" width="800">
+</p>
 
 5 images, 5 different creatures, 5 different seeds. Find the diamond in the rough.
 
@@ -180,18 +198,29 @@ Found a prompt you like? Generate multiple variations at once:
 Need a specific aspect ratio? Add size parameters:
 
 ```
->>> epic fantasy landscape : w1920,h1080
+>>> epic fantasy landscape : w1216,h832
 ```
 
-<!-- TODO: Screenshot of widescreen landscape -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/09_widescreen.png" width="800">
+</p>
+
 
 Or combine everything:
 
 ```
->>> a __mythical_creature__ in a magical forest > cinematic and epic : x3,w1920,h1080
+>>> a __mythical_creature__ in a magical forest > cinematic and epic : x3,w1216,h832
 ```
 
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/10.png" width="800">
+</p>
+
 3 widescreen cinematic images with random creatures and enhanced prompts. One command.
+
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/11.png" width="800">
+</p>
 
 ---
 
@@ -203,19 +232,18 @@ Type `/settings` to open the settings dialog:
 >>> /settings
 ```
 
-<!-- TODO: Screenshot of settings dialog -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/12_settings.png" width="800">
+</p>
 
 **Gallery Tab** — Choose how your images display:
 - **Flex Row** — Images flow naturally (default)
 - **Masonry** — Pinterest-style columns
 - **Grid** — Uniform squares or auto-fit
 
-<!-- TODO: Screenshot of gallery layout options -->
 
 **Thumbnail Size** — See more detail or fit more images:
 - Small, Medium, Large, XL, or custom (80-500px)
-
-<!-- TODO: Screenshot of thumbnail size options -->
 
 ---
 
@@ -223,7 +251,9 @@ Type `/settings` to open the settings dialog:
 
 Your gallery grows with every generation. Use the layout options to find what works for you:
 
-<!-- TODO: Screenshot of masonry layout with many images -->
+<p align="center">
+  <img alt="Z-Explorer" src="docs/assets/13_layout.png" width="800">
+</p>
 
 **Hover** over any image to see its prompt. **Click** to view full size.
 
