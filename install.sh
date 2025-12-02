@@ -95,12 +95,8 @@ echo "Or add an alias to your shell config:"
 echo "  alias z-explorer='cd $INSTALL_DIR && uv run z-explorer'"
 echo ""
 
-# Run quick setup and launch (downloads models automatically)
-echo "🔧 Configuring with Quick Start defaults..."
-uv run z-explorer --quick-setup --show-config
-
+# Run with quick-setup (configures defaults and launches)
 echo ""
 echo "🚀 Launching Z-Explorer on $HOST (models will download automatically)..."
 echo ""
-uv run z-explorer --host "$HOST"
-
+uv run z-explorer --quick-setup --host "$HOST"

@@ -50,13 +50,13 @@ try {
     Write-Host "✓ uv already installed" -ForegroundColor Green
 } catch {
     Write-Host "📦 Installing uv (fast Python package manager)..." -ForegroundColor Cyan
-    
+
     try {
         Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
-        
+
         # Refresh PATH
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-        
+
         # Verify installation
         $null = Get-Command uv -ErrorAction Stop
         $uvInstalled = $true
@@ -94,14 +94,10 @@ Write-Host "  cd $InstallDir" -ForegroundColor White
 Write-Host "  uv run z-explorer" -ForegroundColor White
 Write-Host ""
 
-# Run quick setup and launch (downloads models automatically)
-Write-Host "🔧 Configuring with Quick Start defaults..." -ForegroundColor Cyan
-uv run z-explorer --quick-setup --show-config
-
+# Run with quick-setup (configures defaults and launches)
 Write-Host ""
 Write-Host "🚀 Launching Z-Explorer on $HostParam (models will download automatically)..." -ForegroundColor Cyan
 Write-Host ""
-uv run z-explorer --host $HostParam
+uv run z-explorer --quick-setup --host $HostParam
 
 Pop-Location
-
