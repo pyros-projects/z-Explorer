@@ -66,6 +66,8 @@ Once complete — you're ready to create!
 >
 > **Note:** The installer creates a `z-Explorer` folder in your current directory. Run it from where you want to install!
 >
+> **Note:** The installer tries to automatically install uv and Node.js if missing. If this fails, please install them manually before running the installer again.
+>
 > See [Installation](#installation) for Docker, manual setup, and advanced options.
 
 ---
