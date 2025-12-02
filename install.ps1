@@ -45,17 +45,19 @@ try {
 # Check for Node.js
 try {
     $null = Get-Command node -ErrorAction Stop
-    $nodeVersion = node --version 2>&1
+    $nodeVersion = node --version
     Write-Host "✓ Node.js $nodeVersion already installed" -ForegroundColor Green
 } catch {
     Write-Host "📦 Installing Node.js via winget..." -ForegroundColor Cyan
 
     try {
         $null = Get-Command winget -ErrorAction Stop
-        # winget writes progress to stderr - redirect to suppress
-        $wingetOutput = winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements 2>&1
+        # Allow stderr for winget
+        $ErrorActionPreference = "Continue"
+        winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+        $ErrorActionPreference = "Stop"
         if ($LASTEXITCODE -ne 0) {
-            throw "winget failed: $wingetOutput"
+            throw "winget failed"
         }
 
         # Refresh PATH
@@ -63,7 +65,7 @@ try {
 
         # Verify installation
         $null = Get-Command node -ErrorAction Stop
-        $nodeVersion = node --version 2>&1
+        $nodeVersion = node --version
         Write-Host "✓ Node.js $nodeVersion installed" -ForegroundColor Green
     } catch {
         Write-Host "❌ Failed to install Node.js. Please install manually: https://nodejs.org/" -ForegroundColor Red
@@ -100,39 +102,40 @@ try {
 $InstallDir = if ($env:Z_EXPLORER_DIR) { $env:Z_EXPLORER_DIR } else { "$(Get-Location)\z-Explorer" }
 
 # Clone or update repository
+# Temporarily allow stderr (git writes progress there)
+$ErrorActionPreference = "Continue"
 if (Test-Path $InstallDir) {
     Write-Host "📁 Directory $InstallDir already exists" -ForegroundColor Cyan
     Write-Host "   Pulling latest changes..." -ForegroundColor Cyan
     Push-Location $InstallDir
-    # Git writes progress to stderr, which PowerShell treats as error - redirect to suppress
-    $pullOutput = git pull 2>&1
+    git pull
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Git pull failed: $pullOutput" -ForegroundColor Red
+        Write-Host "❌ Git pull failed" -ForegroundColor Red
         Pop-Location
         exit 1
     }
-    Write-Host "   $pullOutput" -ForegroundColor Gray
 } else {
     Write-Host "📥 Cloning Z-Explorer to $InstallDir..." -ForegroundColor Cyan
-    # Git writes progress to stderr, which PowerShell treats as error - redirect to suppress
-    $cloneOutput = git clone https://github.com/pyros-projects/z-Explorer.git $InstallDir 2>&1
+    git clone https://github.com/pyros-projects/z-Explorer.git $InstallDir
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Git clone failed: $cloneOutput" -ForegroundColor Red
+        Write-Host "❌ Git clone failed" -ForegroundColor Red
         exit 1
     }
     Push-Location $InstallDir
 }
+$ErrorActionPreference = "Stop"
 
 # Install dependencies
 Write-Host "📦 Installing dependencies (this may take a few minutes)..." -ForegroundColor Cyan
-# uv writes info to stderr, which PowerShell treats as error - redirect to suppress
-$syncOutput = uv sync 2>&1
+# Temporarily allow stderr (uv writes info there)
+$ErrorActionPreference = "Continue"
+uv sync
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ uv sync failed: $syncOutput" -ForegroundColor Red
+    Write-Host "❌ uv sync failed" -ForegroundColor Red
     Pop-Location
     exit 1
 }
-Write-Host $syncOutput -ForegroundColor Gray
+$ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "✅ Installation complete!" -ForegroundColor Green
@@ -146,7 +149,8 @@ Write-Host ""
 Write-Host ""
 Write-Host "🚀 Launching Z-Explorer on $HostParam (models will download automatically)..." -ForegroundColor Cyan
 Write-Host ""
-# uv writes info to stderr - merge streams to prevent PowerShell error
-uv run z-explorer --quick-setup --host $HostParam 2>&1
+# Allow stderr for uv run (writes info there)
+$ErrorActionPreference = "Continue"
+uv run z-explorer --quick-setup --host $HostParam
 
 Pop-Location
