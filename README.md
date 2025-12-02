@@ -52,24 +52,17 @@ curl -fsSL https://raw.githubusercontent.com/pyros-projects/z-Explorer/main/inst
 irm https://raw.githubusercontent.com/pyros-projects/z-Explorer/main/install.ps1 | iex
 ```
 
-**First launch downloads the models:**
+**After a bit your browser should open**
 
-```bash
-cd z-Explorer
-uv run z-explorer
-```
-
-<!-- TODO: Screenshot of setup wizard -->
-
-Pick **"Quick Start"** when prompted. Grab a coffee while ~10GB of models download. ☕
+Click **"Download"** when prompted. Grab a coffee while ~10GB of models download. ☕
 
 <p align="center">
   <img alt="Z-Explorer" src="docs/assets/download-progress-live.png" width="400">
 </p>
 
-Once complete, your browser opens to `http://localhost:8345` — you're ready to create!
+Once complete — you're ready to create!
 
-> **Requirements:** Linux or Windows, NVIDIA GPU with 12GB+ VRAM, [uv](https://docs.astral.sh/uv/) package manager.
+> **Requirements:** Linux or Windows, NVIDIA GPU with 12GB+ VRAM (8GB+ should be fine too), [uv](https://docs.astral.sh/uv/) package manager.
 > See [Installation](#installation) for Docker, manual setup, and advanced options.
 
 ---
@@ -307,15 +300,16 @@ Launch Z-Explorer and get a beautiful web-based UI:
 - **Prompt saved** with every image
 
 ```bash
-z-explorer
+uv run z-explorer
 ```
 
 ### ⌨️ CLI Mode (For Purists)
 
 Prefer a pure terminal experience?
+Terminal with good graphical abilities preferred (Kitty or Alacritty)
 
 ```bash
-z-explorer --cli
+uv run z-explorer --cli
 ```
 
 Same power, different vibe. Perfect for SSH sessions or terminal lovers.
@@ -357,8 +351,7 @@ winget install OpenJS.NodeJS.LTS
 ```bash
 git clone https://github.com/pyros-projects/z-Explorer.git
 cd z-Explorer
-uv sync
-uv run z-explorer
+uv run z-explorer --quick-setup
 ```
 
 That's it. `uv sync` handles all dependencies including bleeding-edge versions from Git.
