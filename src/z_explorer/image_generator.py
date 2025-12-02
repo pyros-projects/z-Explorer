@@ -13,10 +13,10 @@ No ComfyUI or external services required!
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Callable, Optional
 
-from rich.console import Console
 from PIL import Image
+from rich.console import Console
 
 console = Console(stderr=True)
 
@@ -46,12 +46,20 @@ def _unload_llm_if_needed():
 def _load_pipeline_sdnq(model_path: str):
     """Load pipeline from SDNQ.
 
-    Args:
-        model_path: Path to model
-    """
-    import torch
-    import diffusers
+    SDNQ (SD.Next Quantization) provides cross-platform quantization.
+    Importing SDNQConfig registers the 'sdnq' quantization type with diffusers.
 
+    Args:
+        model_path: Path to model (HuggingFace repo or local path)
+    """
+    import diffusers
+    import torch
+
+    # IMPORTANT: Import SDNQConfig to register 'sdnq' quantization type with diffusers
+    # Without this import, diffusers won't recognize the quantization format
+    from sdnq import SDNQConfig  # noqa: F401 - import registers quantization backend
+
+    console.print(f"[cyan]Loading SDNQ quantized model: {model_path}[/cyan]")
     pipe = diffusers.ZImagePipeline.from_pretrained(
         model_path, torch_dtype=torch.bfloat16
     )
@@ -67,7 +75,7 @@ def _load_pipeline_hf(model_path: str, quantize: bool = True):
         quantize: Whether to use 4-bit quantization
     """
     import torch
-    from diffusers import ZImagePipeline, PipelineQuantizationConfig
+    from diffusers import PipelineQuantizationConfig, ZImagePipeline
 
     console.print(f"[cyan]Loading Z-Image-Turbo from: {model_path}[/cyan]")
 
@@ -165,19 +173,19 @@ def _load_pipeline_components(
         quantize: Not used (quantization requires HF_DOWNLOAD mode)
     """
     import torch
-    from safetensors import safe_open
-    from safetensors.torch import load_file
     from accelerate import init_empty_weights
     from accelerate.utils import set_module_tensor_to_device
     from diffusers import (
-        ZImagePipeline,
-        FlowMatchEulerDiscreteScheduler,
         AutoencoderKL,
+        FlowMatchEulerDiscreteScheduler,
+        ZImagePipeline,
     )
     from diffusers.models.transformers.transformer_z_image import (
         ZImageTransformer2DModel,
     )
-    from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
+    from safetensors import safe_open
+    from safetensors.torch import load_file
+    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
     console.print("[cyan]Loading Z-Image-Turbo from components...[/cyan]")
     console.print(f"  [dim]Transformer: {transformer_path}[/dim]")
@@ -354,7 +362,7 @@ def _load_pipeline():
             ) from e
 
     # Get configuration
-    from z_explorer.model_config import get_image_model_config, LoadingMode
+    from z_explorer.model_config import LoadingMode, get_image_model_config
 
     config = get_image_model_config()
 
@@ -484,9 +492,8 @@ def generate_image_with_preview(
 
     Same as generate_image but shows progress in terminal.
     """
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-
     import torch
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
     pipe = _load_pipeline()
 
@@ -547,6 +554,7 @@ def unload_pipeline():
 
     if _pipeline is not None:
         import gc
+
         import torch
 
         del _pipeline

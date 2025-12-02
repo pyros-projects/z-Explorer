@@ -53,7 +53,7 @@ def _load_model():
 
     try:
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+        from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
     except ImportError:
         raise ImportError(
             "Local mode requires transformers and torch. Install with: uv sync"
@@ -61,9 +61,9 @@ def _load_model():
 
     # Get independent LLM config
     from z_explorer.model_config import (
-        get_llm_config,
-        get_image_model_config,
         LLMMode,
+        get_image_model_config,
+        get_llm_config,
     )
 
     config = get_llm_config()
@@ -146,8 +146,9 @@ def _load_model():
 def _load_from_z_image(img_config):
     """Load LLM from Z-Image's text encoder based on image config."""
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
-    from z_explorer.model_config import LoadingMode, DEFAULT_Z_IMAGE_REPO
+    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+
+    from z_explorer.model_config import DEFAULT_Z_IMAGE_REPO, LoadingMode
 
     if img_config.mode == LoadingMode.COMPONENTS:
         # Load from local safetensor file
@@ -206,6 +207,11 @@ def _load_from_z_image(img_config):
 
     elif img_config.mode == LoadingMode.SDNQ:
         # Load from SDNQ model
+        # IMPORTANT: Import SDNQConfig to register 'sdnq' quantization type with transformers
+        from sdnq import (
+            SDNQConfig,  # noqa: F401 - import registers quantization backend
+        )
+
         console.print(f"[cyan]Loading LLM from SDNQ: {img_config.sdnq_model}[/cyan]")
 
         tokenizer = AutoTokenizer.from_pretrained(
@@ -329,7 +335,7 @@ def _generate_with_outlines(prompt: str, count: int) -> list[str] | None:
     """
     try:
         import outlines
-        from outlines import models, generate
+        from outlines import generate, models
 
         # Get the already-loaded model and tokenizer
         model, tokenizer = _load_model()
@@ -454,6 +460,7 @@ def unload_model():
 
     if _model is not None:
         import gc
+
         import torch
 
         del _model
