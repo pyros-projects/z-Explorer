@@ -950,6 +950,28 @@ wheels = [
 ]
 
 [[package]]
+name = "peft"
+version = "0.18.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "accelerate" },
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "psutil" },
+    { name = "pyyaml" },
+    { name = "safetensors" },
+    { name = "torch", version = "2.9.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
+    { name = "torch", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "tqdm" },
+    { name = "transformers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/0c/f2938db546ac7fc961ab5917cd50fcf5d0d70b406de93e3faccaa504e152/peft-0.18.0.tar.gz", hash = "sha256:c81c80b2056ab40c23d58ef25f74daab417ac653970718589a11a8af28218588", size = 634141, upload-time = "2025-11-13T11:13:06.603Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/55/481bf25613d40ef53534f664deba7b138fe566356b6ca10304e2b3b2529c/peft-0.18.0-py3-none-any.whl", hash = "sha256:624f69ca6393b765ccc6734adda7ca57d80b238f0900a42c357d8b67a03d62ff", size = 556427, upload-time = "2025-11-13T11:13:03.664Z" },
+]
+
+[[package]]
 name = "pillow"
 version = "10.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1829,6 +1851,7 @@ dependencies = [
     { name = "loguru" },
     { name = "mistral-common" },
     { name = "outlines" },
+    { name = "peft" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -1871,6 +1894,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "mistral-common", specifier = ">=1.8.6" },
     { name = "outlines", specifier = ">=1.2.9" },
+    { name = "peft", specifier = ">=0.18.0" },
     { name = "pillow", specifier = ">=10.4.0" },
     { name = "pydantic", specifier = ">=2.11.3" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
