@@ -455,15 +455,12 @@ Everything runs locally. No internet required after initial setup.
 
 ---
 
-## Gallery
+## Roadmap
 
-<table>
-  <tr>
-    <td><img src="docs/assets/gallery-1.png" width="250"></td>
-    <td><img src="docs/assets/gallery-2.png" width="250"></td>
-    <td><img src="docs/assets/gallery-3.png" width="250"></td>
-  </tr>
-</table>
+- **LoRA Support** — Load and apply LoRA weights for fine-tuned styles, characters, and concepts
+- **Variable Management** — Create, edit, and organize your prompt variables through the UI
+- **Gallery Management** — Multiple folders, favorites, tags, search, and filtering to organize thousands of generations
+- **More Prompt Magic** — Latent space exploration, prompt interpolation, and support for external LLM services (OpenAI, Anthropic, Ollama)
 
 ---
 
