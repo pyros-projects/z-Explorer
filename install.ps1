@@ -45,21 +45,25 @@ try {
 # Check for Node.js
 try {
     $null = Get-Command node -ErrorAction Stop
-    $nodeVersion = node --version
+    $nodeVersion = node --version 2>&1
     Write-Host "✓ Node.js $nodeVersion already installed" -ForegroundColor Green
 } catch {
     Write-Host "📦 Installing Node.js via winget..." -ForegroundColor Cyan
 
     try {
         $null = Get-Command winget -ErrorAction Stop
-        winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+        # winget writes progress to stderr - redirect to suppress
+        $wingetOutput = winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "winget failed: $wingetOutput"
+        }
 
         # Refresh PATH
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 
         # Verify installation
         $null = Get-Command node -ErrorAction Stop
-        $nodeVersion = node --version
+        $nodeVersion = node --version 2>&1
         Write-Host "✓ Node.js $nodeVersion installed" -ForegroundColor Green
     } catch {
         Write-Host "❌ Failed to install Node.js. Please install manually: https://nodejs.org/" -ForegroundColor Red
@@ -121,7 +125,14 @@ if (Test-Path $InstallDir) {
 
 # Install dependencies
 Write-Host "📦 Installing dependencies (this may take a few minutes)..." -ForegroundColor Cyan
-uv sync
+# uv writes info to stderr, which PowerShell treats as error - redirect to suppress
+$syncOutput = uv sync 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ uv sync failed: $syncOutput" -ForegroundColor Red
+    Pop-Location
+    exit 1
+}
+Write-Host $syncOutput -ForegroundColor Gray
 
 Write-Host ""
 Write-Host "✅ Installation complete!" -ForegroundColor Green
@@ -135,6 +146,7 @@ Write-Host ""
 Write-Host ""
 Write-Host "🚀 Launching Z-Explorer on $HostParam (models will download automatically)..." -ForegroundColor Cyan
 Write-Host ""
-uv run z-explorer --quick-setup --host $HostParam
+# uv writes info to stderr - merge streams to prevent PowerShell error
+uv run z-explorer --quick-setup --host $HostParam 2>&1
 
 Pop-Location
