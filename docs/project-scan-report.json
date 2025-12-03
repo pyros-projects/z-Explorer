@@ -1,0 +1,39 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2025-12-02T21:10:00Z",
+    "last_updated": "2025-12-02T21:10:00Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "exhaustive",
+  "project_root": "/home/ai/projects/z-Explorer",
+  "output_folder": "/home/ai/projects/z-Explorer/docs",
+  "completed_steps": [
+    {
+      "step": "step_1",
+      "status": "completed",
+      "timestamp": "2025-12-02T21:10:00Z",
+      "summary": "Classified as multi-part with 2 parts: backend, gui"
+    }
+  ],
+  "current_step": "completed",
+  "findings": {
+    "project_classification": "Multi-part monolith with 2 parts",
+    "files_generated": 6,
+    "documentation_complete": true
+  },
+  "project_types": [
+    {
+      "part_id": "backend",
+      "project_type_id": "backend",
+      "display_name": "Backend/CLI"
+    },
+    {
+      "part_id": "gui",
+      "project_type_id": "web",
+      "display_name": "GUI (Svelte Frontend)"
+    }
+  ],
+  "outputs_generated": ["project-scan-report.json"],
+  "resume_instructions": "Continue from step 2"
+}
